@@ -4077,3 +4077,20 @@ beginseg
     number 3
 endseg
 #endif
+
+beginseg
+    name "supartest_scene"
+    compress
+    romalign 0x1000
+    include "$(BUILD_DIR)/assets/scenes/test_levels/supartest/supartest_scene.o"
+    number 2
+endseg
+
+beginseg
+    name "supartest_room_0"
+    compress
+    romalign 0x1000
+    include "$(BUILD_DIR)/assets/scenes/test_levels/supartest/supartest_room_0.o"
+    number 3
+endseg
+

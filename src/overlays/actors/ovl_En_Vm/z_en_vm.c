@@ -387,6 +387,18 @@ void EnVm_Die(EnVm* this, PlayState* play) {
     this->headRotY += 0x9C4;
     Actor_MoveXZGravity(&this->actor);
 
+    this->beamRot.y = this->actor.shape.rot.y + this->headRotY;
+    this->beamRot.z = this->actor.shape.rot.z;
+
+    this->beamScale.x = 0.1f;
+    Actor_PlaySfx(&this->actor, NA_SE_EN_BIMOS_LAZER - SFX_FLAG);
+
+    if (this->unk_260 > 2) {
+        CollisionCheck_SetAT(play, &play->colChkCtx, &this->colliderQuad1.base);
+    }
+
+    this->unk_260 = 3;
+
     if (--this->timer == 0) {
         EnBom* bomb = (EnBom*)Actor_Spawn(&play->actorCtx, play, ACTOR_EN_BOM, this->actor.world.pos.x,
                                           this->actor.world.pos.y, this->actor.world.pos.z, 0, 0, 0x6FF, BOMB_BODY);

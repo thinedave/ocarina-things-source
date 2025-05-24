@@ -286,6 +286,7 @@ static MapSelectEntry sMapSelectEntries[] = {
     { "64DD TEST  n64dd_SetDiskVersion(1)", (void*)func_80800AD0_unknown, 0 },
     { "64DD TEST2 n64dd_SetDiskVersion(0)", (void*)func_80800B08_unknown, 0 },
 #endif
+    { "BEAMOS TEST", MapSelect_LoadGame, ENTR_BEAMOS_TEST_0 },
 };
 
 void MapSelect_UpdateMenu(MapSelectState* this) {
