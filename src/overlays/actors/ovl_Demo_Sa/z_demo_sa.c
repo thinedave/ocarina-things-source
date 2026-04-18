@@ -18,9 +18,9 @@
 #include "terminal.h"
 #include "translation.h"
 #include "z_lib.h"
-#include "z64play.h"
-#include "z64player.h"
-#include "z64save.h"
+#include "play_state.h"
+#include "player.h"
+#include "save.h"
 
 #include "assets/objects/object_sa/object_sa.h"
 
@@ -627,12 +627,12 @@ void func_8098F7BC(DemoSa* this, PlayState* play) {
 }
 
 void func_8098F7FC(DemoSa* this, PlayState* play) {
-    s32 sp1C;
+    s32 animFinished;
 
     func_8098E5C8(this, play);
-    sp1C = DemoSa_UpdateSkelAnime(this);
+    animFinished = DemoSa_UpdateSkelAnime(this);
     func_8098E480(this);
-    func_8098F610(this, sp1C);
+    func_8098F610(this, animFinished);
 }
 
 void func_8098F83C(DemoSa* this, PlayState* play) {

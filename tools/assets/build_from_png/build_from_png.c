@@ -17,6 +17,7 @@
 #include "../n64texconv/src/libn64texconv/n64texconv.h"
 
 #define NUM_FORMATS 9
+#define MAX_N_SUFFIXES 5
 static const struct fmt_info {
     const char* name;
     int fmt;
@@ -57,8 +58,7 @@ static bool strendswith(const char* s, const char* suffix) {
 static bool parse_png_p(char* png_p_buf, const struct fmt_info** fmtp, enum sub_format* subfmt, int* elem_sizep,
                         size_t* len_png_p_prefix, char** tlut_namep, int* tlut_elem_sizep, bool print_err) {
     // The last 5 (or less) suffixes, without the '.'
-    const int max_n_suffixes = 5;
-    char* png_p_suffixes[max_n_suffixes];
+    char* png_p_suffixes[MAX_N_SUFFIXES];
     int n_suffixes_found = 0;
     size_t i = strlen(png_p_buf);
     while (i != 0) {
@@ -66,7 +66,7 @@ static bool parse_png_p(char* png_p_buf, const struct fmt_info** fmtp, enum sub_
         if (png_p_buf[i] == '.') {
             png_p_suffixes[n_suffixes_found] = &png_p_buf[i + 1];
             n_suffixes_found++;
-            if (n_suffixes_found >= max_n_suffixes) {
+            if (n_suffixes_found >= MAX_N_SUFFIXES) {
                 break;
             }
             png_p_buf[i] = '\0';
@@ -406,6 +406,7 @@ static bool handle_ci_shared_tlut(const char* png_p, const struct fmt_info* fmt,
                             len_pngs_with_tlut++;
                         }
                     }
+                    free(direntry_tlut_name);
                 }
             }
             free(direntry_name_buf);
@@ -462,15 +463,21 @@ static bool handle_ci_shared_tlut(const char* png_p, const struct fmt_info* fmt,
         assert(tlut_elem_size == 8 || tlut_elem_size == 4);
         sprintf(pal_inc_c_p, "%s/%s.tlut.rgba16%s.inc.c", out_dir_p, tlut_name, tlut_elem_size == 8 ? "" : ".u32");
 
-        const unsigned int max_colors = fmt->siz == G_IM_SIZ_4b                                  ? 16
-                                        : subfmt == SUBFMT_SPLIT_LO || subfmt == SUBFMT_SPLIT_HI ? 128
-                                                                                                 : 256;
+        const bool is_split_palette = subfmt == SUBFMT_SPLIT_LO || subfmt == SUBFMT_SPLIT_HI;
+        const unsigned int max_colors = fmt->siz == G_IM_SIZ_4b ? 16 : is_split_palette ? 128 : 256;
 
         if (all_other_pngs_match_ref_img_pal && ref_img->pal->count <= max_colors) {
             // write matching palette, and matching color indices for all pngs
 #ifdef VERBOSE
             fprintf(stderr, "Matching data detected!\n");
 #endif
+
+            if (is_split_palette && ref_img->pal->count < max_colors) {
+                // split palettes must be exactly 128 colors, resize to full size
+                struct n64_palette* old_pal = ref_img->pal;
+                ref_img->pal = n64texconv_palette_resize(ref_img->pal, max_colors);
+                n64texconv_palette_free(old_pal);
+            }
 
             // pass pad_to_8b=true to account for the case where this is in fact not matching data
             // (the png was silently palettized by n64texconv)
@@ -532,9 +539,16 @@ static bool handle_ci_shared_tlut(const char* png_p, const struct fmt_info* fmt,
             const float dither_level = 0.5f;
 
             success = n64texconv_quantize_shared(out_indices, out_pal, &out_pal_count, texels, widths, heights,
-                                                 num_images, max_colors, dither_level) == 0;
+                                                 num_images, max_colors, dither_level, G_IM_FMT_RGBA) == 0;
             if (!success) {
                 fprintf(stderr, "Could not co-palettize images\n");
+            }
+
+            if (is_split_palette) {
+                for (size_t i = out_pal_count; i < max_colors; i++) {
+                    out_pal[i] = (struct color){ .w = 0 };
+                }
+                out_pal_count = max_colors;
             }
 
             // write palette to .inc.c
@@ -629,6 +643,7 @@ static bool handle_ci_shared_tlut(const char* png_p, const struct fmt_info* fmt,
     }
 
     if (ref_img != NULL) {
+        n64texconv_palette_free(ref_img->pal);
         n64texconv_image_free(ref_img);
     }
 

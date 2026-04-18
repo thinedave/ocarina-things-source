@@ -2,7 +2,7 @@
 #define Z_BOSS_DODONGO_H
 
 #include "ultra64.h"
-#include "z64actor.h"
+#include "actor.h"
 
 struct BossDodongo;
 
@@ -73,7 +73,7 @@ typedef struct BossDodongo {
     /* 0x020C */ f32 unk_20C;
     /* 0x0210 */ f32 colorFilterR;
     /* 0x0214 */ f32 colorFilterG;
-    /* 0x0214 */ f32 colorFilterB;
+    /* 0x0218 */ f32 colorFilterB;
     /* 0x021C */ f32 colorFilterMin;
     /* 0x0220 */ f32 colorFilterMax;
     /* 0x0224 */ f32 unk_224;

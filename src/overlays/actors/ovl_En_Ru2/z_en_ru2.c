@@ -19,10 +19,10 @@
 #include "terminal.h"
 #include "translation.h"
 #include "z_lib.h"
-#include "z64audio.h"
-#include "z64play.h"
-#include "z64player.h"
-#include "z64save.h"
+#include "audio.h"
+#include "play_state.h"
+#include "player.h"
+#include "save.h"
 
 #include "assets/objects/object_ru2/object_ru2.h"
 
@@ -97,8 +97,15 @@ static ColliderCylinderInitType1 sCylinderInit = {
         OC1_NONE,
         COLSHAPE_CYLINDER,
     },
-    { 0x00, { 0x00000000, 0x00, 0x00 }, { 0x00000080, 0x00, 0x00 }, 0x00, 0x01, 0x00 },
-    { 30, 100, 0, { 0 } },
+    {
+        ELEM_MATERIAL_UNK0,
+        { 0x00000000, HIT_SPECIAL_EFFECT_NONE, 0x00 },
+        { 0x00000080, HIT_BACKLASH_NONE, 0x00 },
+        ATELEM_NONE,
+        ACELEM_ON,
+        OCELEM_NONE,
+    },
+    { 30, 100, 0, { 0, 0, 0 } },
 };
 
 static void* sEyeTextures[] = {
@@ -463,12 +470,12 @@ void EnRu2_SageOfWaterDialog(EnRu2* this, PlayState* play) {
 }
 
 void EnRu2_RaiseArms(EnRu2* this, PlayState* play) {
-    s32 animDone;
+    s32 animFinished;
 
     EnRu2_UpdateBgCheckInfo(this, play);
-    animDone = EnRu2_UpdateSkelAnime(this);
+    animFinished = EnRu2_UpdateSkelAnime(this);
     EnRu2_UpdateEyes(this);
-    EnRu2_HoldArmsUp(this, animDone);
+    EnRu2_HoldArmsUp(this, animFinished);
 }
 
 void EnRu2_AwaitWaterMedallion(EnRu2* this, PlayState* play) {
@@ -732,12 +739,12 @@ void EnRu2_CreditsVisible(EnRu2* this, PlayState* play) {
 }
 
 void EnRu2_CreditsTurnHeadDownLeft(EnRu2* this, PlayState* play) {
-    s32 animDone;
+    s32 animFinished;
 
     EnRu2_UpdateBgCheckInfo(this, play);
-    animDone = EnRu2_UpdateSkelAnime(this);
+    animFinished = EnRu2_UpdateSkelAnime(this);
     EnRu2_UpdateEyes(this);
-    EnRu2_HoldLookingDownLeftPose(this, animDone);
+    EnRu2_HoldLookingDownLeftPose(this, animFinished);
 }
 
 void EnRu2_SetEncounterSwitchFlag(EnRu2* this, PlayState* play) {
@@ -835,13 +842,11 @@ void EnRu2_DialogCameraHandler(EnRu2* this, PlayState* play) {
 
     if (dialogState == TEXT_STATE_DONE_FADING) {
         if (this->lastDialogState != TEXT_STATE_DONE_FADING) {
-            // "I'm Komatsu!" (cinema scene dev)
-            PRINTF("おれが小松だ！ \n");
+            PRINTF(T("おれが小松だ！ \n", "I'm Komatsu! \n")); // (cinema scene dev)
             this->textboxCount++;
             if (this->textboxCount % 6 == 3) {
                 player = GET_PLAYER(play);
-                // "uorya-!" (screeming sound)
-                PRINTF("うおりゃー！ \n");
+                PRINTF(T("うおりゃー！ \n", "uorya-! \n")); // (screaming sound)
                 Camera_SetFinishedFlag(GET_ACTIVE_CAM(play));
                 player->actor.world.pos.x = 820.0f;
                 player->actor.world.pos.y = 0.0f;

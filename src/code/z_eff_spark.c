@@ -5,11 +5,11 @@
 #include "printf.h"
 #include "sys_matrix.h"
 #include "translation.h"
-#include "z64effect.h"
-#include "z64play.h"
-#include "z64skin_matrix.h"
+#include "effect.h"
+#include "play_state.h"
+#include "skin_matrix.h"
 
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/gameplay_keep_0x38FB0.h"
 
 // original name: "spark"
 void EffectSpark_Init(void* thisx, void* initParamsx) {

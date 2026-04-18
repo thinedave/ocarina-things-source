@@ -2,7 +2,14 @@
 #define Z_BG_HAKA_ZOU_H
 
 #include "ultra64.h"
-#include "z64actor.h"
+#include "actor.h"
+
+typedef enum BgHakaZouType {
+    /* 0x0 */ BGHAKAZOU_TYPE_GIANT_BIRD_STATUE,
+    /* 0x1 */ BGHAKAZOU_TYPE_BOMBABLE_SKULL_WALL,
+    /* 0x2 */ BGHAKAZOU_TYPE_BOMBABLE_RUBBLE,
+    /* 0x3 */ BGHAKAZOU_TYPE_SKULL_WALL_RUBBLE
+} BgHakaZouType;
 
 struct BgHakaZou;
 

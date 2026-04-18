@@ -11,11 +11,12 @@
 #include "gfx_setupdl.h"
 #include "segmented_address.h"
 #include "sys_matrix.h"
-#include "z64effect.h"
-#include "z64play.h"
-#include "z64player.h"
+#include "effect.h"
+#include "play_state.h"
+#include "player.h"
 
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/eff_fragments_1.h"
+#include "assets/objects/gameplay_keep/eff_fragments_2_model.h"
 
 #define rPitch regs[0]
 #define rYaw regs[1]

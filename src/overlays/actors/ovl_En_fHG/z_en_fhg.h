@@ -2,8 +2,8 @@
 #define Z_EN_FHG_H
 
 #include "ultra64.h"
-#include "z64actor.h"
-#include "z64skin.h"
+#include "actor.h"
+#include "skin.h"
 
 struct EnfHG;
 
@@ -35,7 +35,7 @@ typedef struct EnfHG {
     /* 0x018C */ Vec3f inPaintingPos;
     /* 0x0198 */ f32 inPaintingVelX;
     /* 0x019C */ f32 inPaintingVelZ;
-    /* 0x0198 */ f32 damageSpeedMod;
+    /* 0x01A0 */ f32 damageSpeedMod;
     /* 0x01A4 */ f32 approachRate;
     /* 0x01A8 */ f32 subCamVelFactor;
     /* 0x01AC */ f32 subCamPanZ;

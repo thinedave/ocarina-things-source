@@ -15,8 +15,8 @@
 #include "terminal.h"
 #include "translation.h"
 #include "z_lib.h"
-#include "z64play.h"
-#include "z64skin_matrix.h"
+#include "play_state.h"
+#include "skin_matrix.h"
 
 #include "assets/objects/object_oF1d_map/object_oF1d_map.h"
 
@@ -302,12 +302,12 @@ void func_8097D058(DemoGo* this, PlayState* play) {
 }
 
 void func_8097D088(DemoGo* this, PlayState* play) {
-    s32 something;
+    s32 animFinished;
 
     func_8097CA30(this, play);
-    something = DemoGo_UpdateSkelAnime(this);
+    animFinished = DemoGo_UpdateSkelAnime(this);
     func_8097C930(this);
-    func_8097CF20(this, play, something);
+    func_8097CF20(this, play, animFinished);
 }
 
 void func_8097D0D0(DemoGo* this, PlayState* play) {

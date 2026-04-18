@@ -11,11 +11,11 @@
 #include "segmented_address.h"
 #include "sys_matrix.h"
 #include "z_lib.h"
-#include "z64effect.h"
-#include "z64play.h"
-#include "z64skin_matrix.h"
+#include "effect.h"
+#include "play_state.h"
+#include "skin_matrix.h"
 
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/eff_bomb_explosion.h"
 
 #define rScale regs[0]
 #define rTexIndex regs[1]

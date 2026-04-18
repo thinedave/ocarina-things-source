@@ -13,17 +13,18 @@
 #include "sys_math.h"
 #include "sys_matrix.h"
 #include "terminal.h"
+#include "translation.h"
 #include "versions.h"
 #include "z_lib.h"
-#include "z64audio.h"
-#include "z64curve.h"
-#include "z64draw.h"
-#include "z64cutscene_flags.h"
-#include "z64effect.h"
-#include "z64play.h"
-#include "z64save.h"
+#include "audio.h"
+#include "curve.h"
+#include "draw.h"
+#include "cutscene_flags.h"
+#include "effect.h"
+#include "play_state.h"
+#include "save.h"
 
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/eff_flash.h"
 #include "assets/objects/object_efc_crystal_light/object_efc_crystal_light.h"
 #include "assets/objects/object_efc_fire_ball/object_efc_fire_ball.h"
 #include "assets/objects/object_efc_lgt_shower/object_efc_lgt_shower.h"
@@ -503,7 +504,7 @@ void DemoEffect_Init(Actor* thisx, PlayState* play2) {
             this->jewel.isPositionInit = 0;
             DemoEffect_InitJewel(play, this);
             Actor_ChangeCategory(play, &play->actorCtx, &this->actor, ACTORCAT_BOSS);
-            if ((play->sceneId == SCENE_JABU_JABU) && GET_INFTABLE(INFTABLE_145)) {
+            if ((play->sceneId == SCENE_JABU_JABU) && GET_INFTABLE(INFTABLE_RUTO_HAS_SAPPHIRE)) {
                 Actor_Kill(&this->actor);
                 return;
             }
@@ -547,7 +548,7 @@ void DemoEffect_WaitForObject(DemoEffect* this, PlayState* play) {
         this->actor.draw = this->initDrawFunc;
         this->updateFunc = this->initUpdateFunc;
 
-        PRINTF(VT_FGCOL(CYAN) " 転送終了 move_wait " VT_RST);
+        PRINTF(VT_FGCOL(CYAN) T(" 転送終了 move_wait ", " Transfer completed move_wait ") VT_RST);
     }
 }
 
@@ -705,12 +706,12 @@ void DemoEffect_InitTimeWarp(DemoEffect* this, PlayState* play) {
         SkelCurve_SetAnim(&this->skelCurve, &gTimeWarpAnim, 1.0f, 59.0f, 59.0f, 0.0f);
         SkelCurve_Update(play, &this->skelCurve);
         this->updateFunc = DemoEffect_UpdateTimeWarpReturnFromChamberOfSages;
-        PRINTF(VT_FGCOL(CYAN) " 縮むバージョン \n" VT_RST);
+        PRINTF(VT_FGCOL(CYAN) T(" 縮むバージョン \n", " Shrinking version \n") VT_RST);
     } else {
         SkelCurve_SetAnim(&this->skelCurve, &gTimeWarpAnim, 1.0f, 59.0f, 1.0f, 1.0f);
         SkelCurve_Update(play, &this->skelCurve);
         this->updateFunc = DemoEffect_UpdateTimeWarpPullMasterSword;
-        PRINTF(VT_FGCOL(CYAN) " 通常 バージョン \n" VT_RST);
+        PRINTF(VT_FGCOL(CYAN) T(" 通常 バージョン \n", " Normal version \n") VT_RST);
     }
 }
 

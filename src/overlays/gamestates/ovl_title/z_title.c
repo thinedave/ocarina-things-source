@@ -25,9 +25,9 @@
 #include "sys_freeze.h"
 #include "title_setup_state.h"
 #include "versions.h"
-#include "z64actor.h"
-#include "z64environment.h"
-#include "z64save.h"
+#include "actor.h"
+#include "environment.h"
+#include "save.h"
 
 #include "assets/textures/nintendo_rogo_static/nintendo_rogo_static.h"
 
@@ -203,7 +203,7 @@ void ConsoleLogo_Destroy(GameState* thisx) {
 #if PLATFORM_N64
     if (this->unk_1E0) {
         if (func_801C7818() != 0) {
-            func_800D31A0();
+            Freeze_CurrentThread();
         }
         func_801C7268();
     }
@@ -223,7 +223,7 @@ void ConsoleLogo_Init(GameState* thisx) {
 #if PLATFORM_N64
     if ((D_80121210 != 0) && (D_80121211 != 0) && (D_80121212 == 0)) {
         if (func_801C7658() != 0) {
-            func_800D31A0();
+            Freeze_CurrentThread();
         }
         this->unk_1E0 = true;
     } else {

@@ -1,10 +1,10 @@
 #include "gfx.h"
 #include "gfx_setupdl.h"
 #include "sys_matrix.h"
-#include "z64play.h"
-#include "z64debug_display.h"
+#include "play_state.h"
+#include "debug_display.h"
 
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/debug_models.h"
 
 typedef struct DebugDispObjectInfo {
     /* 0x00 */ s16 drawType;  // indicates which draw function to use when displaying the object

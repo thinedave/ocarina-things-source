@@ -8,10 +8,10 @@
 
 #include "libc64/qrand.h"
 #include "segmented_address.h"
-#include "z64effect.h"
-#include "z64play.h"
+#include "effect.h"
+#include "play_state.h"
 
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/eff_magma_bubble.h"
 
 u32 EffectSsGMagma_Init(PlayState* play, u32 index, EffectSs* this, void* initParamsx);
 void EffectSsGMagma_Draw(PlayState* play, u32 index, EffectSs* this);

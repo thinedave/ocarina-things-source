@@ -11,11 +11,12 @@
 #include "gfx_setupdl.h"
 #include "segmented_address.h"
 #include "z_lib.h"
-#include "z64effect.h"
-#include "z64play.h"
-#include "z64skin_matrix.h"
+#include "effect.h"
+#include "play_state.h"
+#include "skin_matrix.h"
 
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/eff_spark_model.h"
+#include "assets/objects/gameplay_keep/eff_spark_textures.h"
 
 #define rPrimColorR regs[0]
 #define rPrimColorG regs[1]

@@ -2,13 +2,14 @@
  * Original Filename: system.c
  */
 
+#include "alignment.h"
 #include "array_count.h"
 #include "attributes.h"
 #include "buffers.h"
 #include "segment_symbols.h"
 #include "ultra64.h"
 #include "versions.h"
-#include "z64audio.h"
+#include "audio.h"
 
 #define MK_ASYNC_MSG(retData, tableType, id, loadStatus) \
     (((retData) << 24) | ((tableType) << 16) | ((id) << 8) | (loadStatus))
@@ -117,7 +118,7 @@ void AudioLoad_DecreaseSampleDmaTtls(void) {
 }
 
 /**
- * original name:Nas_WaveDmaCallBack
+ * original name: Nas_WaveDmaCallBack
  */
 void* AudioLoad_DmaSampleData(u32 devAddr, u32 size, s32 arg2, u8* dmaIndexRef, s32 medium) {
     s32 pad1;

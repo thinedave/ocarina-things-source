@@ -19,15 +19,16 @@
 #include "sys_math.h"
 #include "sys_matrix.h"
 #include "z_lib.h"
-#include "z64audio.h"
-#include "z64effect.h"
-#include "z64light.h"
-#include "z64play.h"
-#include "z64player.h"
-#include "z64quest_hint.h"
-#include "z64save.h"
+#include "audio.h"
+#include "effect.h"
+#include "light.h"
+#include "play_state.h"
+#include "player.h"
+#include "quest_hint.h"
+#include "save.h"
 
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/fairy_skel.h"
+#include "assets/objects/gameplay_keep/fairy_anim.h"
 
 #define FLAGS (ACTOR_FLAG_UPDATE_CULLING_DISABLED | ACTOR_FLAG_DRAW_CULLING_DISABLED | ACTOR_FLAG_UPDATE_DURING_OCARINA)
 

@@ -9,10 +9,10 @@
 #include "gfx.h"
 #include "gfx_setupdl.h"
 #include "sys_matrix.h"
-#include "z64effect.h"
-#include "z64play.h"
+#include "effect.h"
+#include "play_state.h"
 
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/lens_flare.h"
 
 #define rScale regs[0]
 #define rTimer regs[1]

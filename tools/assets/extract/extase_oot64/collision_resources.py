@@ -42,6 +42,7 @@ class CollisionVtxListResource(CDataResource):
 
     def get_c_declaration_base(self):
         if hasattr(self, "HACK_IS_STATIC_ON"):
+            assert isinstance(self.cdata_ext, CDataExt_Array)
             return f"Vec3s {self.symbol_name}[{self.cdata_ext.length}]"
         return f"Vec3s {self.symbol_name}[]"
 
@@ -58,7 +59,7 @@ class CollisionVtxListResource(CDataResource):
             raise ValueError()
 
     def get_h_includes(self):
-        return ("z64math.h",)
+        return ("z_math.h",)
 
 
 class CollisionPolyListResource(CDataResource):
@@ -161,6 +162,7 @@ class CollisionPolyListResource(CDataResource):
 
     def get_c_declaration_base(self):
         if hasattr(self, "HACK_IS_STATIC_ON"):
+            assert isinstance(self.cdata_ext, CDataExt_Array)
             return f"CollisionPoly {self.symbol_name}[{self.cdata_ext.length}]"
         return f"CollisionPoly {self.symbol_name}[]"
 
@@ -177,7 +179,7 @@ class CollisionPolyListResource(CDataResource):
             raise ValueError()
 
     def get_h_includes(self):
-        return ("z64bgcheck.h",)
+        return ("bgcheck.h",)
 
 
 class CollisionSurfaceTypeListResource(CDataResource):
@@ -292,6 +294,7 @@ class CollisionSurfaceTypeListResource(CDataResource):
 
     def get_c_declaration_base(self):
         if hasattr(self, "HACK_IS_STATIC_ON"):
+            assert isinstance(self.cdata_ext, CDataExt_Array)
             return f"SurfaceType {self.symbol_name}[{self.cdata_ext.length}]"
         return f"SurfaceType {self.symbol_name}[]"
 
@@ -305,7 +308,7 @@ class CollisionSurfaceTypeListResource(CDataResource):
         return ("stdbool.h",)
 
     def get_h_includes(self):
-        return ("z64bgcheck.h",)
+        return ("bgcheck.h",)
 
 
 class BgCamFuncDataResource(CDataResource):
@@ -318,6 +321,7 @@ class BgCamFuncDataResource(CDataResource):
 
     def get_c_declaration_base(self):
         if hasattr(self, "HACK_IS_STATIC_ON"):
+            assert isinstance(self.cdata_ext, CDataExt_Array)
             return f"Vec3s {self.symbol_name}[{self.cdata_ext.length}]"
         return f"Vec3s {self.symbol_name}[]"
 
@@ -332,12 +336,12 @@ class BgCamFuncDataResource(CDataResource):
         return f"&{self.symbol_name}[{index}]"
 
     def get_h_includes(self):
-        return ("z64math.h",)
+        return ("z_math.h",)
 
 
 class CollisionBgCamListResource(CDataResource):
     def write_bgCamFuncData(
-        resource: "CollisionSurfaceTypeListResource",
+        resource: "CollisionBgCamListResource",
         memory_context: "MemoryContext",
         v,
         wctx: CDataExtWriteContext,
@@ -419,6 +423,7 @@ class CollisionBgCamListResource(CDataResource):
 
     def get_c_declaration_base(self):
         if hasattr(self, "HACK_IS_STATIC_ON"):
+            assert isinstance(self.cdata_ext, CDataExt_Array)
             return f"BgCamInfo {self.symbol_name}[{self.cdata_ext.length}]"
         return f"BgCamInfo {self.symbol_name}[]"
 
@@ -429,20 +434,28 @@ class CollisionBgCamListResource(CDataResource):
             raise ValueError()
 
     def get_c_includes(self):
-        return ("z64camera.h",)
+        return ("camera.h",)
 
     def get_h_includes(self):
-        return ("z64bgcheck.h",)
+        return ("bgcheck.h",)
 
 
 class CollisionWaterBoxesResource(CDataResource):
 
     def write_properties(v):
+        assert isinstance(v, int)
         bgCamIndex = (v >> 0) & 0xFF
         lightIndex = (v >> 8) & 0x1F
         room = (v >> 13) & 0x3F
         setFlag19 = (v >> 19) & 1
-        return f"WATERBOX_PROPERTIES(/* bgCamIndex */ {bgCamIndex}, /* lightIndex */ {lightIndex}, /* room */ {room}, /* setFlag19 */ {'true' if setFlag19 else 'false'})"
+        return (
+            "WATERBOX_PROPERTIES("
+            f"/* bgCamIndex */ {bgCamIndex}, "
+            f"/* lightIndex */ {lightIndex}, "
+            f"/* room */ {room}, "
+            f"/* setFlag19 */ {'true' if setFlag19 else 'false'}"
+            ")"
+        )
 
     elem_cdata_ext = CDataExt_Struct(
         (
@@ -479,7 +492,7 @@ class CollisionWaterBoxesResource(CDataResource):
         return ("stdbool.h",)
 
     def get_h_includes(self):
-        return ("z64bgcheck.h",)
+        return ("bgcheck.h",)
 
 
 def transfer_HACK_IS_STATIC_ON(source, dest):
@@ -517,7 +530,11 @@ class CollisionResource(CDataResource):
                 CollisionVtxListResource(
                     file,
                     offset,
-                    f"{resource.name}_{address:08X}_VtxList",
+                    (
+                        f"{resource.name.removesuffix('Col')}VtxList"
+                        if resource.name.endswith("Col")
+                        else f"{resource.name}_{address:08X}_VtxList"
+                    ),
                     resource.cdata_unpacked["numVertices"],
                 ),
             ),
@@ -562,7 +579,11 @@ class CollisionResource(CDataResource):
                 CollisionPolyListResource(
                     file,
                     offset,
-                    f"{resource.name}_{address:08X}_PolyList",
+                    (
+                        f"{resource.name.removesuffix('Col')}PolyList"
+                        if resource.name.endswith("Col")
+                        else f"{resource.name}_{address:08X}_PolyList"
+                    ),
                     resource.cdata_unpacked["numPolygons"],
                 ),
             ),
@@ -615,7 +636,11 @@ class CollisionResource(CDataResource):
                     CollisionWaterBoxesResource(
                         file,
                         offset,
-                        f"{resource.name}_{address:08X}_WaterBoxes",
+                        (
+                            f"{resource.name.removesuffix('Col')}WaterBoxes"
+                            if resource.name.endswith("Col")
+                            else f"{resource.name}_{address:08X}_WaterBoxes"
+                        ),
                         length,
                     ),
                 ),
@@ -728,7 +753,11 @@ class CollisionResource(CDataResource):
                     CollisionSurfaceTypeListResource(
                         file,
                         offset,
-                        f"{self.name}_{surfaceTypeList_address:08X}_SurfaceTypes",
+                        (
+                            f"{self.name.removesuffix('Col')}SurfaceTypes"
+                            if self.name.endswith("Col")
+                            else f"{self.name}_{surfaceTypeList_address:08X}_SurfaceTypes"
+                        ),
                         length_surfaceTypeList,  # TODO change CollisionSurfaceTypeListResource to a CDataArrayResource (same with more resources)
                     ),
                 ),
@@ -760,7 +789,11 @@ class CollisionResource(CDataResource):
                         CollisionBgCamListResource(
                             file,
                             offset,
-                            f"{self.name}_{bgCamList_address:08X}_BgCamList",
+                            (
+                                f"{self.name.removesuffix('Col')}BgCamList"
+                                if self.name.endswith("Col")
+                                else f"{self.name}_{bgCamList_address:08X}_BgCamList"
+                            ),
                             length_bgCamList,
                         ),
                     ),
@@ -809,4 +842,4 @@ class CollisionResource(CDataResource):
         return ("array_count.h",)
 
     def get_h_includes(self):
-        return ("z64bgcheck.h",)
+        return ("bgcheck.h",)

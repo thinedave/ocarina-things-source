@@ -26,9 +26,9 @@
 #include "versions.h"
 #include "vi_mode.h"
 #include "z_game_dlftbls.h"
-#include "z64audio.h"
-#include "z64save.h"
-#include "z64play.h"
+#include "audio.h"
+#include "save.h"
+#include "play_state.h"
 
 #define GFXPOOL_HEAD_MAGIC 0x1234
 #define GFXPOOL_TAIL_MAGIC 0x5678
@@ -50,13 +50,21 @@ OSTime sGraphPrevTaskTimeStart;
 FaultClient sGraphFaultClient;
 
 UCodeInfo D_8012D230[3] = {
+#ifndef F3DEX_GBI_PL
+    { UCODE_TYPE_F3DZEX, gspF3DZEX2_NoN_fifoTextStart },
+#else
     { UCODE_TYPE_F3DZEX, gspF3DZEX2_NoN_PosLight_fifoTextStart },
+#endif
     { UCODE_TYPE_UNK, NULL },
     { UCODE_TYPE_S2DEX, gspS2DEX2d_fifoTextStart },
 };
 
 UCodeInfo D_8012D248[3] = {
+#ifndef F3DEX_GBI_PL
+    { UCODE_TYPE_F3DZEX, gspF3DZEX2_NoN_fifoTextStart },
+#else
     { UCODE_TYPE_F3DZEX, gspF3DZEX2_NoN_PosLight_fifoTextStart },
+#endif
     { UCODE_TYPE_UNK, NULL },
     { UCODE_TYPE_S2DEX, gspS2DEX2d_fifoTextStart },
 };
@@ -81,7 +89,11 @@ void Graph_DisassembleUCode(Gfx* workBuf) {
         disassembler.enableLog = R_UCODE_DISAS_LOG_LEVEL;
 
         UCodeDisas_RegisterUCode(&disassembler, ARRAY_COUNT(D_8012D230), D_8012D230);
+#ifndef F3DEX_GBI_PL
+        UCodeDisas_SetCurUCode(&disassembler, gspF3DZEX2_NoN_fifoTextStart);
+#else
         UCodeDisas_SetCurUCode(&disassembler, gspF3DZEX2_NoN_PosLight_fifoTextStart);
+#endif
 
         UCodeDisas_Disassemble(&disassembler, workBuf);
 
@@ -120,7 +132,11 @@ void Graph_UCodeFaultClient(Gfx* workBuf) {
     UCodeDisas_Init(&disassembler);
     disassembler.enableLog = true;
     UCodeDisas_RegisterUCode(&disassembler, ARRAY_COUNT(D_8012D248), D_8012D248);
+#ifndef F3DEX_GBI_PL
+    UCodeDisas_SetCurUCode(&disassembler, gspF3DZEX2_NoN_fifoTextStart);
+#else
     UCodeDisas_SetCurUCode(&disassembler, gspF3DZEX2_NoN_PosLight_fifoTextStart);
+#endif
     UCodeDisas_Disassemble(&disassembler, workBuf);
     UCodeDisas_Destroy(&disassembler);
 }
@@ -141,6 +157,13 @@ void Graph_InitTHGA(GraphicsContext* gfxCtx) {
     gfxCtx->overlayBuffer = pool->overlayBuffer;
     gfxCtx->workBuffer = pool->workBuffer;
 
+    //! @bug fbIdx is a signed integer that can overflow into the negatives. When compiled with a C99+ compiler or IDO,
+    //! the remainder operator will yield -1 for odd negative values of fbIdx.
+    //! This causes SysCfb_GetFbPtr to read beyond the bounds of an array when retrieving the framebuffer pointer, which
+    //! will likely crash the game.
+    //!
+    //! This isn't an issue in practice. In the worst case scenario with the game operating at a consistent 60 FPS,
+    //! it would take approximately 414.25 days of continuous operation for fbIdx to overflow.
     gfxCtx->curFrameBuffer = SysCfb_GetFbPtr(gfxCtx->fbIdx % 2);
     gfxCtx->unk_014 = 0;
 }
@@ -331,10 +354,10 @@ void Graph_Update(GraphicsContext* gfxCtx, GameState* gameState) {
 #if DEBUG_FEATURES
     OPEN_DISPS(gfxCtx, "../graph.c", 966);
 
-    gDPNoOpString(WORK_DISP++, "WORK_DISP 開始", 0);
-    gDPNoOpString(POLY_OPA_DISP++, "POLY_OPA_DISP 開始", 0);
-    gDPNoOpString(POLY_XLU_DISP++, "POLY_XLU_DISP 開始", 0);
-    gDPNoOpString(OVERLAY_DISP++, "OVERLAY_DISP 開始", 0);
+    gDPNoOpString(WORK_DISP++, T("WORK_DISP 開始", "WORK_DISP start"), 0);
+    gDPNoOpString(POLY_OPA_DISP++, T("POLY_OPA_DISP 開始", "POLY_OPA_DISP start"), 0);
+    gDPNoOpString(POLY_XLU_DISP++, T("POLY_XLU_DISP 開始", "POLY_XLU_DISP start"), 0);
+    gDPNoOpString(OVERLAY_DISP++, T("OVERLAY_DISP 開始", "OVERLAY_DISP start"), 0);
 
     CLOSE_DISPS(gfxCtx, "../graph.c", 975);
 #endif
@@ -345,10 +368,10 @@ void Graph_Update(GraphicsContext* gfxCtx, GameState* gameState) {
 #if DEBUG_FEATURES
     OPEN_DISPS(gfxCtx, "../graph.c", 987);
 
-    gDPNoOpString(WORK_DISP++, "WORK_DISP 終了", 0);
-    gDPNoOpString(POLY_OPA_DISP++, "POLY_OPA_DISP 終了", 0);
-    gDPNoOpString(POLY_XLU_DISP++, "POLY_XLU_DISP 終了", 0);
-    gDPNoOpString(OVERLAY_DISP++, "OVERLAY_DISP 終了", 0);
+    gDPNoOpString(WORK_DISP++, T("WORK_DISP 終了", "WORK_DISP end"), 0);
+    gDPNoOpString(POLY_OPA_DISP++, T("POLY_OPA_DISP 終了", "POLY_OPA_DISP end"), 0);
+    gDPNoOpString(POLY_XLU_DISP++, T("POLY_XLU_DISP 終了", "POLY_XLU_DISP end"), 0);
+    gDPNoOpString(OVERLAY_DISP++, T("OVERLAY_DISP 終了", "OVERLAY_DISP end"), 0);
 
     CLOSE_DISPS(gfxCtx, "../graph.c", 996);
 #endif

@@ -11,10 +11,10 @@
 #include "gfx_setupdl.h"
 #include "sys_matrix.h"
 #include "z_lib.h"
-#include "z64effect.h"
-#include "z64play.h"
+#include "effect.h"
+#include "play_state.h"
 
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/eff_fire.h"
 
 #define rScaleMax regs[0]
 #define rScale regs[1]

@@ -2,8 +2,8 @@
 #define Z_EN_PO_FIELD_H
 
 #include "ultra64.h"
-#include "z64actor.h"
-#include "z64light.h"
+#include "actor.h"
+#include "light.h"
 
 struct EnPoField;
 
@@ -34,7 +34,7 @@ typedef struct EnPoField {
     /* 0x019C */ Vec3s jointTable[10];
     /* 0x01D8 */ Vec3s morphTable[10];
     /* 0x0214 */ Color_RGBA8 lightColor;
-    /* 0x0214 */ Color_RGBA8 soulColor;
+    /* 0x0218 */ Color_RGBA8 soulColor;
     /* 0x021C */ f32 scaleModifier;
     /* 0x0220 */ f32 flameScale;
     /* 0x0224 */ Vec3f flamePosition;

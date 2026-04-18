@@ -56,6 +56,8 @@ def report_room_shape_at_segmented(
 
 
 def get_room_shape_resource_type(file: File, offset: int):
+    assert file.data is not None
+
     room_shape_type_int = file.data[offset]
     room_shape_type = RoomShapeType(room_shape_type_int)
 
@@ -113,7 +115,7 @@ class RoomShapeNormalEntryArrayResource(CDataArrayNamedLengthResource):
         return f"RoomShapeDListsEntry {self.symbol_name}[{self.length_name}]"
 
     def get_h_includes(self):
-        return ("z64room.h",)
+        return ("room.h",)
 
 
 class RoomShapeNormalResource(CDataResource):
@@ -191,7 +193,7 @@ class RoomShapeNormalResource(CDataResource):
         return ("array_count.h",)
 
     def get_h_includes(self):
-        return ("z64room.h",)
+        return ("room.h",)
 
 
 class RoomShapeDListsEntryResource(CDataResource):
@@ -207,7 +209,7 @@ class RoomShapeDListsEntryResource(CDataResource):
             raise ValueError
 
     def get_h_includes(self):
-        return ("z64room.h",)
+        return ("room.h",)
 
 
 def report_RoomShapeImageBase_entry(resource, memory_context: "MemoryContext", v):
@@ -269,6 +271,7 @@ class JFIFResource(Resource):
         return f"{self.name}.jpg"
 
     def write_extracted(self, memory_context):
+        assert self.file.data is not None
         # TODO trim zeros at the end of the data
         self.extract_to_path.write_bytes(
             self.file.data[self.range_start : self.range_end]
@@ -343,7 +346,7 @@ class RoomShapeImageSingleResource(CDataResource):
             raise ValueError
 
     def get_h_includes(self):
-        return ("z64room.h",)
+        return ("room.h",)
 
 
 class RoomShapeImageMultiBgEntryArrayResource(CDataArrayNamedLengthResource):
@@ -395,7 +398,7 @@ class RoomShapeImageMultiBgEntryArrayResource(CDataArrayNamedLengthResource):
         return f"RoomShapeImageMultiBgEntry {self.name}[{self.length_name}]"
 
     def get_h_includes(self):
-        return ("z64room.h",)
+        return ("room.h",)
 
 
 class RoomShapeImageMultiResource(CDataResource):
@@ -462,7 +465,7 @@ class RoomShapeImageMultiResource(CDataResource):
             raise ValueError
 
     def get_h_includes(self):
-        return ("z64room.h",)
+        return ("room.h",)
 
 
 class RoomShapeCullableEntryArrayResource(CDataArrayNamedLengthResource):
@@ -479,7 +482,7 @@ class RoomShapeCullableEntryArrayResource(CDataArrayNamedLengthResource):
         return f"RoomShapeCullableEntry {self.symbol_name}[{self.length_name}]"
 
     def get_h_includes(self):
-        return ("z64room.h",)
+        return ("room.h",)
 
 
 class RoomShapeCullableResource(CDataResource):
@@ -554,4 +557,4 @@ class RoomShapeCullableResource(CDataResource):
             raise ValueError
 
     def get_h_includes(self):
-        return ("z64room.h",)
+        return ("room.h",)

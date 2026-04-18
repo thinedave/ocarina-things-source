@@ -3,10 +3,10 @@
 #include "gfx.h"
 #include "gfx_setupdl.h"
 #include "sys_matrix.h"
-#include "z64light.h"
-#include "z64play.h"
+#include "light.h"
+#include "play_state.h"
 
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/fairy_skel.h"
 
 #define LIGHTS_BUFFER_SIZE 32
 

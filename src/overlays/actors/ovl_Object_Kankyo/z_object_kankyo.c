@@ -16,13 +16,17 @@
 #include "sys_math3d.h"
 #include "sys_matrix.h"
 #include "z_lib.h"
-#include "z64audio.h"
-#include "z64play.h"
-#include "z64player.h"
-#include "z64save.h"
+#include "audio.h"
+#include "play_state.h"
+#include "player.h"
+#include "save.h"
 
 #include "assets/objects/object_demo_kekkai/object_demo_kekkai.h"
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/eff_lightning.h"
+#include "assets/objects/gameplay_keep/sun_textures.h"
+#include "assets/objects/gameplay_keep/gameplay_keep_0x4D160.h"
+#include "assets/objects/gameplay_keep/dust_textures.h"
+#include "assets/objects/gameplay_keep/eff_dust.h"
 #include "assets/objects/object_spot02_objects/object_spot02_objects.h"
 
 #define FLAGS (ACTOR_FLAG_UPDATE_CULLING_DISABLED | ACTOR_FLAG_DRAW_CULLING_DISABLED | ACTOR_FLAG_UPDATE_DURING_OCARINA)

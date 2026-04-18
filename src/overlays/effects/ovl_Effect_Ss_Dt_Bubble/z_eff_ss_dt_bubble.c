@@ -12,10 +12,11 @@
 #include "gfx_setupdl.h"
 #include "segmented_address.h"
 #include "sys_matrix.h"
-#include "z64effect.h"
-#include "z64play.h"
+#include "effect.h"
+#include "play_state.h"
 
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/gameplay_keep_0x55DB0.h"
+#include "assets/objects/gameplay_keep/eff_bubble.h"
 
 #define rPrimColorR regs[0]
 #define rPrimColorG regs[1]

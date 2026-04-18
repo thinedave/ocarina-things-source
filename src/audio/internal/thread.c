@@ -6,7 +6,7 @@
 #include "audiothread_cmd.h"
 #include "ultra64.h"
 #include "versions.h"
-#include "z64audio.h"
+#include "audio.h"
 
 #define SAMPLES_TO_OVERPRODUCE 0x10
 #define EXTRA_BUFFERED_AI_SAMPLES_TARGET 0x80
@@ -888,6 +888,9 @@ s32 func_800E6590(s32 seqPlayerIndex, s32 channelIndex, s32 layerIndex) {
     return 0;
 }
 
+/**
+ * original name possibly "Nap_SilenceCheck"
+ */
 s32 func_800E6680(void) {
     return func_800E66C0(0);
 }

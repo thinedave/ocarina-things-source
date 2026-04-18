@@ -11,10 +11,10 @@
 #include "rand.h"
 #include "sys_math.h"
 #include "sys_matrix.h"
-#include "z64effect.h"
-#include "z64play.h"
+#include "effect.h"
+#include "play_state.h"
 
-#include "assets/objects/gameplay_keep/gameplay_keep.h"
+#include "assets/objects/gameplay_keep/eff_ice_fragments.h"
 
 #define rLifespan regs[0]
 #define rYaw regs[1]

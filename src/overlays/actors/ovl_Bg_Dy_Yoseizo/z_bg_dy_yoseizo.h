@@ -2,7 +2,7 @@
 #define Z_BG_DY_YOSEIZO_H
 
 #include "ultra64.h"
-#include "z64actor.h"
+#include "actor.h"
 #include "overlays/actors/ovl_En_Dy_Extra/z_en_dy_extra.h"
 #include "overlays/actors/ovl_En_Ex_Item/z_en_ex_item.h"
 
@@ -23,8 +23,8 @@ typedef struct BgDyYoseizoEffect {
     /* 0x30 */ f32 scale;
     /* 0x34 */ s16 timer; // lifetime
     /* 0x36 */ s16 type; // 0 is general radiance, else is directed towards Player
-    /* 0x36 */ f32 pitch;
-    /* 0x36 */ f32 yaw;
+    /* 0x38 */ f32 pitch;
+    /* 0x3C */ f32 yaw;
     /* 0x40 */ f32 roll;
 } BgDyYoseizoEffect; // size = 0x44
 
@@ -49,7 +49,7 @@ typedef struct BgDyYoseizo {
     /* 0x02FA */ s16 unusedTimer;
     /* 0x02FC */ s16 animationChanged;
     /* 0x02FE */ s16 finishedSpinGrow;
-    /* 0x02FE */ s16 itemSpawned;
+    /* 0x0300 */ s16 itemSpawned;
     /* 0x0302 */ s16 healingTimer;
     /* 0x0304 */ s16 warpEffectSpawned;
     /* 0x0306 */ s16 refillTimer;

@@ -18,6 +18,7 @@ class CutsceneResource(Resource, can_size_be_unknown=True):
         super().__init__(file, range_start, None, name)
 
     def try_parse_data(self, memory_context):
+        assert self.file.data is not None
         assert self.range_start % 4 == 0
         data = self.file.data[self.range_start :]
         num_bytes = len(data)
@@ -53,11 +54,11 @@ class CutsceneResource(Resource, can_size_be_unknown=True):
 
     def get_c_includes(self):
         return (
-            "z64cutscene_commands.h",
+            "cutscene_commands.h",
             # TODO these are not always needed:
-            "z64ocarina.h", # for OCARINA_ACTION_*
-            "z64player.h", # for PLAYER_CUEID_*
+            "ocarina.h", # for OCARINA_ACTION_*
+            "player.h", # for PLAYER_CUEID_*
         )
 
     def get_h_includes(self):
-        return ("z64cutscene.h",)
+        return ("cutscene.h",)

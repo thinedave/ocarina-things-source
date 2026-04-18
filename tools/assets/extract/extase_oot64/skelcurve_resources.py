@@ -27,7 +27,7 @@ class KnotCountsArrayResource(CDataResource, can_size_be_unknown=True):
 
     def __init__(self, file: File, range_start: int, name: str):
         super().__init__(file, range_start, name)
-        self.length = None
+        self.length: int | None = None
 
     def try_parse_data(self, memory_context: "MemoryContext"):
         if self.length is not None:
@@ -63,7 +63,7 @@ class CurveInterpKnotArrayResource(CDataResource, can_size_be_unknown=True):
 
     def __init__(self, file: File, range_start: int, name: str):
         super().__init__(file, range_start, name)
-        self.length = None
+        self.length: int | None = None
 
     def try_parse_data(self, memory_context: "MemoryContext"):
         if self.length is not None:
@@ -83,7 +83,7 @@ class CurveInterpKnotArrayResource(CDataResource, can_size_be_unknown=True):
             raise ValueError()
 
     def get_h_includes(self):
-        return ("z64curve.h",)
+        return ("curve.h",)
 
 
 class ConstantDataArrayResource(CDataResource, can_size_be_unknown=True):
@@ -91,7 +91,7 @@ class ConstantDataArrayResource(CDataResource, can_size_be_unknown=True):
 
     def __init__(self, file: File, range_start: int, name: str):
         super().__init__(file, range_start, name)
-        self.length = None
+        self.length: int | None = None
 
     def try_parse_data(self, memory_context: "MemoryContext"):
         if self.length is not None:
@@ -254,7 +254,7 @@ class CurveAnimationHeaderResource(CDataResource):
         raise ValueError()
 
     def get_h_includes(self):
-        return ("z64curve.h",)
+        return ("curve.h",)
 
 
 class SkelCurveLimbResource(CDataResource):
@@ -283,7 +283,7 @@ class SkelCurveLimbResource(CDataResource):
             raise ValueError()
 
     def get_h_includes(self):
-        return ("z64curve.h",)
+        return ("curve.h",)
 
 
 class SkelCurveLimbArrayResource(CDataResource):
@@ -328,7 +328,7 @@ class SkelCurveLimbArrayResource(CDataResource):
             raise ValueError()
 
     def get_h_includes(self):
-        return ("z64curve.h",)
+        return ("curve.h",)
 
 
 class CurveSkeletonHeaderResource(CDataResource):
@@ -375,4 +375,4 @@ class CurveSkeletonHeaderResource(CDataResource):
         raise ValueError()
 
     def get_h_includes(self):
-        return ("z64curve.h",)
+        return ("curve.h",)

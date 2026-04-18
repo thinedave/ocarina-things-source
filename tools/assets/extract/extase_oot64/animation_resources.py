@@ -30,7 +30,7 @@ class AnimationFrameDataResource(CDataResource, can_size_be_unknown=True):
 
     def __init__(self, file: File, range_start: int, name: str):
         super().__init__(file, range_start, name)
-        self.length = None
+        self.length: int | None = None
 
     def try_parse_data(self, memory_context):
         if self.length is not None:
@@ -64,7 +64,7 @@ class AnimationJointIndicesResource(CDataResource, can_size_be_unknown=True):
 
     def __init__(self, file: File, range_start: int, name: str):
         super().__init__(file, range_start, name)
-        self.length = None
+        self.length: int | None = None
 
     def try_parse_data(self, memory_context):
         if self.length is not None:
@@ -84,7 +84,7 @@ class AnimationJointIndicesResource(CDataResource, can_size_be_unknown=True):
             raise ValueError()
 
     def get_h_includes(self):
-        return ("z64animation.h",)
+        return ("animation.h",)
 
 
 class AnimationResource(CDataResource):
@@ -138,7 +138,11 @@ class AnimationResource(CDataResource):
             lambda file, offset: AnimationFrameDataResource(
                 file,
                 offset,
-                f"{self.name}_{frameData_address:08X}_FrameData",
+                (
+                    f"{self.name.removesuffix('Anim')}FrameData"
+                    if self.name.endswith("Anim")
+                    else f"{self.name}_{frameData_address:08X}_FrameData"
+                ),
             ),
         )
 
@@ -151,7 +155,11 @@ class AnimationResource(CDataResource):
             lambda file, offset: AnimationJointIndicesResource(
                 file,
                 offset,
-                f"{self.name}_{jointIndices_address:08X}_JointIndices",
+                (
+                    f"{self.name.removesuffix('Anim')}JointIndices"
+                    if self.name.endswith("Anim")
+                    else f"{self.name}_{jointIndices_address:08X}_JointIndices"
+                ),
             ),
         )
 
@@ -202,4 +210,4 @@ class AnimationResource(CDataResource):
         return f"AnimationHeader {self.symbol_name}"
 
     def get_h_includes(self):
-        return ("z64animation.h",)
+        return ("animation.h",)
