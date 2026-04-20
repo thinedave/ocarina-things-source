@@ -6,7 +6,6 @@
 #include "audiomgr.h"
 #include "buffers.h"
 #include "controller.h"
-#include "debug_arena.h"
 #include "gfx.h"
 #include "gfxalloc.h"
 #include "fault.h"
@@ -226,7 +225,6 @@ void GameState_Draw(GameState* gameState, GraphicsContext* gfxCtx) {
     if (R_ENABLE_ARENA_DBG < 0) {
 #if PLATFORM_GC && DEBUG_FEATURES
         s32 pad;
-        DebugArena_Display();
         SystemArena_Display();
 #endif
         PRINTF(T("ハイラル滅亡まであと %08x バイト(game_alloc)\n",

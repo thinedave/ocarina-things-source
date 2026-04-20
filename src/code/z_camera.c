@@ -3,7 +3,6 @@
 #include "array_count.h"
 #include "attributes.h"
 #include "controller.h"
-#include "db_camera.h"
 #include "gfx.h"
 #include "letterbox.h"
 #include "one_point_cutscene.h"
@@ -7489,16 +7488,11 @@ void Camera_Init(Camera* camera, View* view, CollisionContext* colCtx, PlayState
         for (i = 0; i < sCamDataRegsInitCount; i++) {
             R_CAM_DATA(i) = sCamDataRegsInit[i];
         }
-
-        DebugCamera_Reset(camera, &D_8015BD80);
 #endif
         sInitRegs = false;
         PREG(88) = -1;
     }
     camera->play = D_8015BD7C = play;
-#if DEBUG_FEATURES
-    DebugCamera_Init(&D_8015BD80, camera);
-#endif
     curUID = sNextUID;
     sNextUID++;
     while (curUID != 0) {
@@ -7734,16 +7728,6 @@ void Camera_PrintSettings(Camera* camera) {
         sp48[i] = '\0';
 
         sp48[camera->play->activeCamId] = 'a';
-        DebugCamera_ScreenTextColored(3, 22, DEBUG_CAM_TEXT_WHITE, sp58);
-        DebugCamera_ScreenTextColored(3, 22, DEBUG_CAM_TEXT_PEACH, sp48);
-        DebugCamera_ScreenTextColored(3, 23, DEBUG_CAM_TEXT_WHITE, "S:");
-        DebugCamera_ScreenTextColored(5, 23, DEBUG_CAM_TEXT_GOLD, sCameraSettingNames[camera->setting]);
-        DebugCamera_ScreenTextColored(3, 24, DEBUG_CAM_TEXT_WHITE, "M:");
-        DebugCamera_ScreenTextColored(5, 24, DEBUG_CAM_TEXT_GOLD, sCameraModeNames[camera->mode]);
-        DebugCamera_ScreenTextColored(3, 25, DEBUG_CAM_TEXT_WHITE, "F:");
-        DebugCamera_ScreenTextColored(
-            5, 25, DEBUG_CAM_TEXT_GOLD,
-            sCameraFunctionNames[sCameraSettings[camera->setting].cameraModes[camera->mode].funcIdx]);
 
         i = 0;
         if (camera->bgCamIndex < 0) {
@@ -7767,8 +7751,6 @@ void Camera_PrintSettings(Camera* camera) {
         sp50[i++] = ' ';
         sp50[i++] = ' ';
         sp50[i] = '\0';
-        DebugCamera_ScreenTextColored(3, 26, DEBUG_CAM_TEXT_WHITE, "I:");
-        DebugCamera_ScreenTextColored(5, 26, DEBUG_CAM_TEXT_GOLD, sp50);
     }
 }
 #endif
@@ -8192,27 +8174,6 @@ Vec3s Camera_Update(Camera* camera) {
     }
 
 #if DEBUG_FEATURES
-    // enable/disable debug cam
-    if (CAMERA_CHECK_BTN(&D_8015BD7C->state.input[2], BTN_START)) {
-        gDebugCamEnabled ^= 1;
-        if (gDebugCamEnabled) {
-            DebugCamera_Enable(&D_8015BD80, camera);
-        } else if (camera->play->csCtx.state != CS_STATE_IDLE) {
-            Cutscene_StopManual(camera->play, &camera->play->csCtx);
-        }
-    }
-
-    // Debug cam update
-    if (gDebugCamEnabled) {
-        camera->play->view.fovy = D_8015BD80.fov;
-        DebugCamera_Update(&D_8015BD80, camera);
-        View_LookAt(&camera->play->view, &D_8015BD80.eye, &D_8015BD80.at, &D_8015BD80.unk_1C);
-        if (ENABLE_DEBUG_CAM_UPDATE) {
-            PRINTF("camera: debug out\n");
-        }
-        return D_8015BD80.sub.unk_104A;
-    }
-
     OREG(0) &= ~8;
 #endif
 
@@ -8644,12 +8605,6 @@ s32 Camera_RequestBgCam(Camera* camera, s32 requestedBgCamIndex) {
 }
 
 Vec3s Camera_GetInputDir(Camera* camera) {
-#if DEBUG_FEATURES
-    if (gDebugCamEnabled) {
-        return D_8015BD80.sub.unk_104A;
-    }
-#endif
-
     return camera->inputDir;
 }
 
@@ -8666,12 +8621,6 @@ s16 Camera_GetInputDirYaw(Camera* camera) {
 }
 
 Vec3s Camera_GetCamDir(Camera* camera) {
-#if DEBUG_FEATURES
-    if (gDebugCamEnabled) {
-        return D_8015BD80.sub.unk_104A;
-    }
-#endif
-
     return camera->camDir;
 }
 

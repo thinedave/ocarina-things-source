@@ -21,7 +21,6 @@ extern struct IrqMgr gIrqMgr;
 #include "libu64/runtime.h"
 #include "array_count.h"
 #include "audiomgr.h"
-#include "debug_arena.h"
 #include "fault.h"
 #include "gfx.h"
 #include "idle.h"
@@ -119,24 +118,6 @@ void Main(void* arg) {
     PRINTF(T("システムヒープ初期化 %08x-%08x %08x\n", "System heap initialization %08x-%08x %08x\n"), systemHeapStart,
            fb, gSystemHeapSize);
     Runtime_Init((void*)systemHeapStart, gSystemHeapSize);
-
-#if DEBUG_FEATURES
-    {
-        void* debugHeapStart;
-        u32 debugHeapSize;
-
-        if (osMemSize >= 0x800000) {
-            debugHeapStart = SysCfb_GetFbEnd();
-            debugHeapSize = PHYS_TO_K0(0x600000) - (uintptr_t)debugHeapStart;
-        } else {
-            debugHeapSize = 0x400;
-            debugHeapStart = SYSTEM_ARENA_MALLOC(debugHeapSize, "../main.c", 565);
-        }
-
-        PRINTF("debug_InitArena(%08x, %08x)\n", debugHeapStart, debugHeapSize);
-        DebugArena_Init(debugHeapStart, debugHeapSize);
-    }
-#endif
 
     Regs_Init();
 
