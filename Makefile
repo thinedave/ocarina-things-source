@@ -14,13 +14,13 @@ SHELL = /usr/bin/env bash
 -include .make_options.mk
 
 # If COMPARE is 1, check the output md5sum after building. Set to 0 when modding.
-COMPARE ?= 1
+COMPARE ?= 0
 # If NON_MATCHING is 1, define the NON_MATCHING C flag when building. Set to 1 when modding.
-NON_MATCHING ?= 0
+NON_MATCHING ?= 1
 # If ORIG_COMPILER is 1, compile with QEMU_IRIX and the original compiler.
 ORIG_COMPILER ?= 0
 # If COMPILER is "gcc", compile with GCC instead of IDO.
-COMPILER ?= ido
+COMPILER ?= gcc
 # Target game version. Ensure the corresponding input ROM is placed in baseroms/$(VERSION)/baserom.z64.
 # Currently the following versions are supported:
 #   ntsc-1.0       N64 NTSC 1.0 (Japan/US depending on REGION)
@@ -58,8 +58,8 @@ N64_EMULATOR ?=
 
 # Version-specific settings
 REGIONAL_CHECKSUM := 0
-#ifeq ($(VERSION),ntsc-1.0)
-#  REGIONAL_CHECKSUM := 1
+ifeq ($(VERSION),ntsc-1.0)
+  REGIONAL_CHECKSUM := 1
   REGION ?= US
   PLATFORM := N64
   DEBUG_FEATURES ?= 1
@@ -67,131 +67,131 @@ REGIONAL_CHECKSUM := 0
   BUILD_DATE := 98-10-21
   BUILD_TIME := 04:56:31
   REVISION := 0
-#else ifeq ($(VERSION),ntsc-1.1)
-#  REGIONAL_CHECKSUM := 1
-#  REGION ?= JP
-#  PLATFORM := N64
-#  DEBUG_FEATURES ?= 0
-#  BUILD_CREATOR := zelda@srd44
-#  BUILD_DATE := 98-10-26
-#  BUILD_TIME := 10:58:45
-#  REVISION := 1
-#else ifeq ($(VERSION),pal-1.0)
-#  REGION ?= EU
-#  PLATFORM := N64
-#  DEBUG_FEATURES ?= 0
-#  BUILD_CREATOR := zelda@srd44
-#  BUILD_DATE := 98-11-10
-#  BUILD_TIME := 14:34:22
-#  REVISION := 0
-#else ifeq ($(VERSION),ntsc-1.2)
-#  REGIONAL_CHECKSUM := 1
-#  REGION ?= JP
-#  PLATFORM := N64
-#  DEBUG_FEATURES ?= 0
-#  BUILD_CREATOR := zelda@srd44
-#  BUILD_DATE := 98-11-12
-#  BUILD_TIME := 18:17:03
-#  REVISION := 2
-#else ifeq ($(VERSION),pal-1.1)
-#  REGION ?= EU
-#  PLATFORM := N64
-#  DEBUG_FEATURES ?= 0
-#  BUILD_CREATOR := zelda@srd44
-#  BUILD_DATE := 98-11-18
-#  BUILD_TIME := 17:36:49
-#  REVISION := 1
-#else ifeq ($(VERSION),gc-jp)
-#  REGION ?= JP
-#  PLATFORM := GC
-#  DEBUG_FEATURES ?= 0
-#  BUILD_CREATOR := zelda@srd022j
-#  BUILD_DATE := 02-10-29
-#  BUILD_TIME := 23:49:53
-#  REVISION := 15
-#else ifeq ($(VERSION),gc-jp-mq)
-#  REGION ?= JP
-#  PLATFORM := GC
-#  DEBUG_FEATURES ?= 0
-#  BUILD_CREATOR := zelda@srd022j
-#  BUILD_DATE := 02-10-30
-#  BUILD_TIME := 00:15:15
-#  REVISION := 15
-#else ifeq ($(VERSION),gc-us)
-#  REGION ?= US
-#  PLATFORM := GC
-#  DEBUG_FEATURES ?= 0
-#  BUILD_CREATOR := zelda@srd022j
-#  BUILD_DATE := 02-12-19
-#  BUILD_TIME := 13:28:09
-#  REVISION := 15
-#else ifeq ($(VERSION),gc-us-mq)
-#  REGION ?= US
-#  PLATFORM := GC
-#  DEBUG_FEATURES ?= 0
-#  BUILD_CREATOR := zelda@srd022j
-#  BUILD_DATE := 02-12-19
-#  BUILD_TIME := 14:05:42
-#  REVISION := 15
-#else ifeq ($(VERSION),gc-eu-dbg-2)
-#  REGION ?= EU
-#  PLATFORM := GC
-#  DEBUG_FEATURES ?= 1
-#  BUILD_CREATOR := zelda@srd022j
-#  BUILD_DATE := 03-02-13
-#  BUILD_TIME := 19:46:49
-#  REVISION := 15
-#else ifeq ($(VERSION),gc-eu-mq-dbg)
-#  REGION ?= EU
-#  PLATFORM := GC
-#  DEBUG_FEATURES ?= 1
-#  BUILD_CREATOR := zelda@srd022j
-#  BUILD_DATE := 03-02-21
-#  BUILD_TIME := 00:16:31
-#  REVISION := 15
-#else ifeq ($(VERSION),gc-eu-dbg)
-#  REGION ?= EU
-#  PLATFORM := GC
-#  DEBUG_FEATURES ?= 1
-#  BUILD_CREATOR := zelda@srd022j
-#  BUILD_DATE := 03-02-21
-#  BUILD_TIME := 00:49:18
-#  REVISION := 15
-#else ifeq ($(VERSION),gc-eu)
-#  REGION ?= EU
-#  PLATFORM := GC
-#  DEBUG_FEATURES ?= 0
-#  BUILD_CREATOR := zelda@srd022j
-#  BUILD_DATE := 03-02-21
-#  BUILD_TIME := 20:12:23
-#  REVISION := 15
-#else ifeq ($(VERSION),gc-eu-mq)
-#  REGION ?= EU
-#  PLATFORM := GC
-#  DEBUG_FEATURES ?= 0
-#  BUILD_CREATOR := zelda@srd022j
-#  BUILD_DATE := 03-02-21
-#  BUILD_TIME := 20:37:19
-#  REVISION := 15
-#else ifeq ($(VERSION),gc-jp-ce)
-#  REGION ?= JP
-#  PLATFORM := GC
-#  DEBUG_FEATURES ?= 0
-#  BUILD_CREATOR := zelda@srd022j
-#  BUILD_DATE := 03-10-08
-#  BUILD_TIME := 21:53:00
-#  REVISION := 15
-#else ifeq ($(VERSION),ique-cn)
-#  REGION ?= US
-#  PLATFORM := IQUE
-#  DEBUG_FEATURES ?= 0
-#  BUILD_CREATOR := build@toad.routefree.com
-#  BUILD_DATE := 03-10-22
-#  BUILD_TIME := 16:23:19
-#  REVISION := 0
-#else
-#$(error Unsupported version $(VERSION))
-#endif
+else ifeq ($(VERSION),ntsc-1.1)
+  REGIONAL_CHECKSUM := 1
+  REGION ?= JP
+  PLATFORM := N64
+  DEBUG_FEATURES ?= 0
+  BUILD_CREATOR := zelda@srd44
+  BUILD_DATE := 98-10-26
+  BUILD_TIME := 10:58:45
+  REVISION := 1
+else ifeq ($(VERSION),pal-1.0)
+  REGION ?= EU
+  PLATFORM := N64
+  DEBUG_FEATURES ?= 0
+  BUILD_CREATOR := zelda@srd44
+  BUILD_DATE := 98-11-10
+  BUILD_TIME := 14:34:22
+  REVISION := 0
+else ifeq ($(VERSION),ntsc-1.2)
+  REGIONAL_CHECKSUM := 1
+  REGION ?= JP
+  PLATFORM := N64
+  DEBUG_FEATURES ?= 0
+  BUILD_CREATOR := zelda@srd44
+  BUILD_DATE := 98-11-12
+  BUILD_TIME := 18:17:03
+  REVISION := 2
+else ifeq ($(VERSION),pal-1.1)
+  REGION ?= EU
+  PLATFORM := N64
+  DEBUG_FEATURES ?= 0
+  BUILD_CREATOR := zelda@srd44
+  BUILD_DATE := 98-11-18
+  BUILD_TIME := 17:36:49
+  REVISION := 1
+else ifeq ($(VERSION),gc-jp)
+  REGION ?= JP
+  PLATFORM := GC
+  DEBUG_FEATURES ?= 0
+  BUILD_CREATOR := zelda@srd022j
+  BUILD_DATE := 02-10-29
+  BUILD_TIME := 23:49:53
+  REVISION := 15
+else ifeq ($(VERSION),gc-jp-mq)
+  REGION ?= JP
+  PLATFORM := GC
+  DEBUG_FEATURES ?= 0
+  BUILD_CREATOR := zelda@srd022j
+  BUILD_DATE := 02-10-30
+  BUILD_TIME := 00:15:15
+  REVISION := 15
+else ifeq ($(VERSION),gc-us)
+  REGION ?= US
+  PLATFORM := GC
+  DEBUG_FEATURES ?= 0
+  BUILD_CREATOR := zelda@srd022j
+  BUILD_DATE := 02-12-19
+  BUILD_TIME := 13:28:09
+  REVISION := 15
+else ifeq ($(VERSION),gc-us-mq)
+  REGION ?= US
+  PLATFORM := GC
+  DEBUG_FEATURES ?= 0
+  BUILD_CREATOR := zelda@srd022j
+  BUILD_DATE := 02-12-19
+  BUILD_TIME := 14:05:42
+  REVISION := 15
+else ifeq ($(VERSION),gc-eu-dbg-2)
+  REGION ?= EU
+  PLATFORM := GC
+  DEBUG_FEATURES ?= 1
+  BUILD_CREATOR := zelda@srd022j
+  BUILD_DATE := 03-02-13
+  BUILD_TIME := 19:46:49
+  REVISION := 15
+else ifeq ($(VERSION),gc-eu-mq-dbg)
+  REGION ?= US
+  PLATFORM := GC
+  DEBUG_FEATURES ?= 1
+  BUILD_CREATOR := zelda@srd022j
+  BUILD_DATE := 03-02-21
+  BUILD_TIME := 00:16:31
+  REVISION := 15
+else ifeq ($(VERSION),gc-eu-dbg)
+  REGION ?= EU
+  PLATFORM := GC
+  DEBUG_FEATURES ?= 1
+  BUILD_CREATOR := zelda@srd022j
+  BUILD_DATE := 03-02-21
+  BUILD_TIME := 00:49:18
+  REVISION := 15
+else ifeq ($(VERSION),gc-eu)
+  REGION ?= EU
+  PLATFORM := GC
+  DEBUG_FEATURES ?= 0
+  BUILD_CREATOR := zelda@srd022j
+  BUILD_DATE := 03-02-21
+  BUILD_TIME := 20:12:23
+  REVISION := 15
+else ifeq ($(VERSION),gc-eu-mq)
+  REGION ?= EU
+  PLATFORM := GC
+  DEBUG_FEATURES ?= 0
+  BUILD_CREATOR := zelda@srd022j
+  BUILD_DATE := 03-02-21
+  BUILD_TIME := 20:37:19
+  REVISION := 15
+else ifeq ($(VERSION),gc-jp-ce)
+  REGION ?= JP
+  PLATFORM := GC
+  DEBUG_FEATURES ?= 0
+  BUILD_CREATOR := zelda@srd022j
+  BUILD_DATE := 03-10-08
+  BUILD_TIME := 21:53:00
+  REVISION := 15
+else ifeq ($(VERSION),ique-cn)
+  REGION ?= US
+  PLATFORM := IQUE
+  DEBUG_FEATURES ?= 0
+  BUILD_CREATOR := build@toad.routefree.com
+  BUILD_DATE := 03-10-22
+  BUILD_TIME := 16:23:19
+  REVISION := 0
+else
+$(error Unsupported version $(VERSION))
+endif
 
 # ORIG_COMPILER cannot be combined with a non-IDO compiler. Check for this case and error out if found.
 ifneq ($(COMPILER),ido)
