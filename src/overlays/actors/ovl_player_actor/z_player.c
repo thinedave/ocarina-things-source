@@ -14523,8 +14523,6 @@ s32 Player_UpdateNoclip(Player* this, PlayState* play) {
             speed = 20.0f;
         }
 
-        DebugCamera_ScreenText(3, 2, "DEBUG MODE");
-
         if (!CHECK_BTN_ALL(sControlInput->cur.button, BTN_L)) {
             if (CHECK_BTN_ALL(sControlInput->cur.button, BTN_B)) {
                 this->actor.world.pos.y += speed;

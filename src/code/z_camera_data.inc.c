@@ -2682,9 +2682,4 @@ Vec3f D_8011D678[] = {
 };
 
 PlayState* D_8015BD7C;
-
-#if DEBUG_FEATURES
-DebugCam D_8015BD80;
-#endif
-
 CollisionPoly* playerFloorPoly;
