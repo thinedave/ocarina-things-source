@@ -25,6 +25,7 @@
 #include "sram.h"
 #include "transition.h"
 #include "view.h"
+#include "radial_menu.h"
 
 union Color_RGBA8_u32;
 struct Path;
@@ -130,6 +131,7 @@ typedef struct PlayState {
     /* 0x1242B */ u8 viewpoint; // toggleable camera setting by shops or player. Is also equal to the bgCamIndex + 1
     /* 0x1242C */ SceneTableEntry* loadedScene;
     /* 0x12430 */ char unk_12430[0xE8];
+    RadialMenuContext radialMenuCtx;
 } PlayState; // size = 0x12518
 
 extern Mtx D_01000000; // billboardMtx

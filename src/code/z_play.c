@@ -1,4 +1,5 @@
 #include "libc64/malloc.h"
+#include "libc64/math64.h"
 #include "libc64/qrand.h"
 #include "libu64/debug.h"
 #include "array_count.h"
@@ -12,6 +13,8 @@
 #include "kaleido_manager.h"
 #include "letterbox.h"
 #include "line_numbers.h"
+#include "assets/textures/icon_item_static/icon_item_static.h"
+#include "assets/textures/parameter_static/parameter_static.h"
 #if PLATFORM_N64
 #include "n64dd.h"
 #endif
@@ -46,6 +49,7 @@
 #include "player.h"
 #include "save.h"
 #include "vis.h"
+#include "radial_menu.h"
 
 #pragma increment_block_number "gc-eu:224 gc-eu-mq:224 gc-jp:224 gc-jp-ce:224 gc-jp-mq:224 gc-us:224 gc-us-mq:224" \
                                "ique-cn:224 ntsc-1.0:240 ntsc-1.1:240 ntsc-1.2:240 pal-1.0:240 pal-1.1:240"
@@ -303,6 +307,8 @@ void Play_Init(GameState* thisx) {
         SET_NEXT_GAMESTATE(&this->state, TitleSetup_Init, TitleSetupState);
         return;
     }
+
+    this->radialMenuCtx.count = 0;
 
 #if PLATFORM_GC && DEBUG_FEATURES
     SystemArena_Display();
@@ -1131,6 +1137,39 @@ void Play_DrawOverlayElements(PlayState* this) {
     }
 
     Message_Draw(this);
+
+    RadialMenu_HandleAll(&this->radialMenuCtx, &this->state);
+
+    if (CHECK_BTN_ANY(this->state.input[0].press.button, BTN_DUP)) {
+        u8 index = (this->radialMenuCtx.count == 0 ? RadialMenu_Init(&this->radialMenuCtx, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2) : (this->radialMenuCtx.count - 1));
+
+        Player_SetCsAction(this, NULL, PLAYER_CSACTION_1);
+
+        RadialMenu* menu = this->radialMenuCtx.elements[index];
+
+        //RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
+        //RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
+        //RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
+        //RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM(ITEM_BOMB), G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL, ITEM_ICON_SIZE);
+        RadialMenu_Open(menu, 92);
+    }
+
+    if (CHECK_BTN_ANY(this->state.input[0].press.button, BTN_DRIGHT) && this->radialMenuCtx.count > 0) {
+        RadialMenu* menu = this->radialMenuCtx.elements[this->radialMenuCtx.count - 1];
+
+        #define IRANDOM_RANGE(min, max) Math_FRoundF((Rand_ZeroOne() * (((f32)max)-((f32)min))) + (f32)min)
+
+        RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM((ItemID)IRANDOM_RANGE(ITEM_DEKU_STICK, ITEM_SHIELD_DEKU)), G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL,
+                               ITEM_ICON_SIZE);
+    }
+
+    if (CHECK_BTN_ANY(this->state.input[0].press.button, BTN_DDOWN) && this->radialMenuCtx.count > 0) {
+        RadialMenu* menu = this->radialMenuCtx.elements[this->radialMenuCtx.count - 1];
+
+        Player_SetCsAction(this, NULL, PLAYER_CSACTION_7);
+
+        RadialMenu_Close(menu);
+    }
 
     if (this->gameOverCtx.state != GAMEOVER_INACTIVE) {
         GameOver_FadeInLights(this);

@@ -817,6 +817,8 @@ beginseg
     include "$(BUILD_DIR)/data/rsp.text.o"
     include "$(BUILD_DIR)/data/rsp.rodata.o"
 
+    include "$(BUILD_DIR)/src/code/radial_menu.o"
+
     // Extra files for non-matching debug builds
 #if DEBUG_FEATURES
     include "$(BUILD_DIR)/src/libu64/mtxuty-cvt.o"
