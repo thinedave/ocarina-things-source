@@ -35,19 +35,19 @@
 #define RADIAL_MENU_STICK_DEADZONE 20.0f
 #define RADIAL_ITEM_INVALID UINT8_MAX
 
-#define RADIAL_MENU_REALLOC_ITEMS(this) ZELDA_ARENA_REALLOC((this)->items.elements, sizeof(RadialMenuItem) * ((this)->items.count > 0 ? (this)->items.count : 1), __FILE__, __LINE__)
-#define RADIAL_MENU_SYNC_TEX(item) DMA_REQUEST_SYNC((item)->texSegment, (uintptr_t)(item)->texture, (item)->texLen, __FILE__, __LINE__)
+#define RADIAL_MENU_REALLOC_ITEMS(this)                                                                         \
+    ZELDA_ARENA_REALLOC((this)->items.elements,                                                                 \
+                        sizeof(RadialMenuItem) * ((this)->items.count > 0 ? (this)->items.count : 1), __FILE__, \
+                        __LINE__)
+#define RADIAL_MENU_SYNC_TEX(item) \
+    DMA_REQUEST_SYNC((item)->texSegment, (uintptr_t)(item)->texture, (item)->texLen, __FILE__, __LINE__)
 
 #define RADIAL_DO_NOTHING
 
-#define BUILD_SIZ_INFO(siz) \
-[siz] = {   \
-    siz##_LOAD_BLOCK,   \
-    siz##_INCR, \
-    siz##_SHIFT,    \
-    siz##_BYTES,    \
-    siz##_LINE_BYTES,    \
-}
+#define BUILD_SIZ_INFO(siz)                                                       \
+    [siz] = {                                                                     \
+        siz##_LOAD_BLOCK, siz##_INCR, siz##_SHIFT, siz##_BYTES, siz##_LINE_BYTES, \
+    }
 #pragma endregion
 
 #pragma region statics
@@ -110,7 +110,8 @@ u8 RadialMenu_Init(RadialMenuContext* radialMenuCtx, s16 x, s16 y) {
     return index;
 }
 
-u8 RadialMenu_AddItem(RadialMenu* this, void* texture, u8 texFormat, u8 texPixelSize, u8 texWidth, u8 texHeight, RadialMenuItemSelectFunc onSelect, u16 controlFlags) {
+u8 RadialMenu_AddItem(RadialMenu* this, void* texture, u8 texFormat, u8 texPixelSize, u8 texWidth, u8 texHeight,
+                      RadialMenuItemSelectFunc onSelect, u16 controlFlags) {
     u8 index = this->items.count;
 
     if (index >= (RADIAL_ITEM_INVALID - 1)) {
@@ -142,8 +143,10 @@ u8 RadialMenu_AddItem(RadialMenu* this, void* texture, u8 texFormat, u8 texPixel
     return index;
 }
 
-u8 RadialMenu_AddItemSync(RadialMenu* this, uintptr_t textureVrom, u8 texFormat, u8 texPixelSize, u8 texWidth, u8 texHeight, RadialMenuItemSelectFunc onSelect, u16 controlFlags, size_t texLen) {
-    u8 index = RadialMenu_AddItem(this, (void*)textureVrom, texFormat, texPixelSize, texWidth, texHeight, onSelect, controlFlags);
+u8 RadialMenu_AddItemSync(RadialMenu* this, uintptr_t textureVrom, u8 texFormat, u8 texPixelSize, u8 texWidth,
+                          u8 texHeight, RadialMenuItemSelectFunc onSelect, u16 controlFlags, size_t texLen) {
+    u8 index = RadialMenu_AddItem(this, (void*)textureVrom, texFormat, texPixelSize, texWidth, texHeight, onSelect,
+                                  controlFlags);
 
     if (index == RADIAL_ITEM_INVALID) {
         return RADIAL_ITEM_INVALID;
@@ -181,14 +184,15 @@ void RadialMenu_RemoveItem(RadialMenu* this, u8 index) {
     }
 
     RadialMenu_ReorderFromIndex(this, index);
-    
+
     this->items.count--;
 
     this->items.elements = RADIAL_MENU_REALLOC_ITEMS(this);
 
     ASSERT(this->items.elements != NULL, "RadialMenu->items.elements failed to realloc!", __FILE__, __LINE__);
 
-    // We do not need to bother nullifying or zeroing out any data because it cannot be accessed from here on and will be overwritten if another item is added
+    // We do not need to bother nullifying or zeroing out any data because it cannot be accessed from here on and will
+    // be overwritten if another item is added
 }
 
 void RadialMenu_Destroy(RadialMenu* this, RadialMenuContext* radialMenuCtx, u8* handlerIndex) {
@@ -268,13 +272,13 @@ void RadialMenu_DrawBackground(RadialMenu* this, GameState* state, Gfx** gfxP) {
 
     // Top left
     gDPLoadTextureBlock(gfx++, gRadialMenuBackgroundTex, G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, 0,
-        G_TX_MIRROR | G_TX_WRAP, G_TX_MIRROR | G_TX_WRAP,
-        5, 5, G_TX_NOLOD, G_TX_NOLOD);
+                        G_TX_MIRROR | G_TX_WRAP, G_TX_MIRROR | G_TX_WRAP, 5, 5, G_TX_NOLOD, G_TX_NOLOD);
 
     gDPSetTileSize(gfx++, G_TX_RENDERTILE, 0, 0, (32 - 1) << 2, (32 - 1) << 2);
 
-    gSPTextureRectangle(gfx++, ((this->x - halfRadius) << 2), ((this->y - halfRadius) << 2), ((this->x + halfRadius) << 2), ((this->y + halfRadius) << 2),
-        G_TX_RENDERTILE, 0, 0, radiusST, radiusST);
+    gSPTextureRectangle(gfx++, ((this->x - halfRadius) << 2), ((this->y - halfRadius) << 2),
+                        ((this->x + halfRadius) << 2), ((this->y + halfRadius) << 2), G_TX_RENDERTILE, 0, 0, radiusST,
+                        radiusST);
 
     *gfxP = gfx;
 
@@ -293,12 +297,11 @@ void RadialMenu_DrawCursor(RadialMenu* this, GameState* state, Gfx** gfxP) {
     gDPSetPrimColor(gfx++, 0, 0, 255, 255, 255, this->alpha);
     gDPSetEnvColor(gfx++, 255, 255, 255, this->alpha);
 
-    gDPLoadTextureBlock(gfx++, gControlStickTex, G_IM_FMT_IA, G_IM_SIZ_8b, 16, 16, 0,
-        G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMIRROR | G_TX_WRAP, 4, G_TX_NOMASK, G_TX_NOLOD,
-        G_TX_NOLOD);
+    gDPLoadTextureBlock(gfx++, gControlStickTex, G_IM_FMT_IA, G_IM_SIZ_8b, 16, 16, 0, G_TX_NOMIRROR | G_TX_WRAP,
+                        G_TX_NOMIRROR | G_TX_WRAP, 4, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
 
-    gSPTextureRectangle(gfx++, ((this->cursorX - 8) << 2), ((this->cursorY - 8) << 2), ((this->cursorX + 8) << 2), ((this->cursorY + 8) << 2),
-        G_TX_RENDERTILE, 0, 0, (1 << 10), (1 << 10));
+    gSPTextureRectangle(gfx++, ((this->cursorX - 8) << 2), ((this->cursorY - 8) << 2), ((this->cursorX + 8) << 2),
+                        ((this->cursorY + 8) << 2), G_TX_RENDERTILE, 0, 0, (1 << 10), (1 << 10));
 
     *gfxP = gfx;
 
@@ -325,24 +328,23 @@ void RadialMenu_DrawItem(RadialMenu* this, GameState* state, RadialMenuItem* ite
 
     gDPSetTextureImage(gfx++, item->texFormat, sImgSizInfo[item->texPixelSize].loadBlock, 1, texture);
 
-    gDPSetTile(gfx++, item->texFormat, sImgSizInfo[item->texPixelSize].loadBlock, 0, 0, G_TX_LOADTILE,
-        0, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK,
-        G_TX_NOLOD);
+    gDPSetTile(gfx++, item->texFormat, sImgSizInfo[item->texPixelSize].loadBlock, 0, 0, G_TX_LOADTILE, 0,
+               G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOLOD);
     gDPLoadSync(gfx++);
 
     gDPLoadBlock(gfx++, G_TX_LOADTILE, 0, 0,
-        (((item->texWidth) * (item->texHeight) + sImgSizInfo[item->texPixelSize].incr) >> sImgSizInfo[item->texPixelSize].shift) -1,
-        CALC_DXT(item->texWidth, sImgSizInfo[item->texPixelSize].bytes));
+                 (((item->texWidth) * (item->texHeight) + sImgSizInfo[item->texPixelSize].incr) >>
+                  sImgSizInfo[item->texPixelSize].shift) -
+                     1,
+                 CALC_DXT(item->texWidth, sImgSizInfo[item->texPixelSize].bytes));
     gDPPipeSync(gfx++);
 
     gDPSetTile(gfx++, item->texFormat, item->texPixelSize,
-        (((item->texWidth) * sImgSizInfo[item->texPixelSize].lineBytes) + 7) >> 3, 0,
-        G_TX_RENDERTILE, 0, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOMIRROR | G_TX_WRAP,
-        G_TX_NOMASK, G_TX_NOLOD);
+               (((item->texWidth) * sImgSizInfo[item->texPixelSize].lineBytes) + 7) >> 3, 0, G_TX_RENDERTILE, 0,
+               G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOLOD);
 
-    gDPSetTileSize(gfx++, G_TX_RENDERTILE, 0, 0,                              
-        ((item->texWidth)  - 1) << G_TEXTURE_IMAGE_FRAC,
-        ((item->texHeight) - 1) << G_TEXTURE_IMAGE_FRAC);
+    gDPSetTileSize(gfx++, G_TX_RENDERTILE, 0, 0, ((item->texWidth) - 1) << G_TEXTURE_IMAGE_FRAC,
+                   ((item->texHeight) - 1) << G_TEXTURE_IMAGE_FRAC);
 
     f32 scale = (this->hoveredItemIndex == index ? 1.0f : 0.7f);
     f32 sizeX = (item->texWidth * scale);
@@ -354,8 +356,8 @@ void RadialMenu_DrawItem(RadialMenu* this, GameState* state, RadialMenuItem* ite
     u8 halfWidth = ((u8)sizeX / 2);
     u8 halfHeight = ((u8)sizeY / 2);
 
-    gSPTextureRectangle(gfx++, ((x - halfWidth) << 2), ((y - halfHeight) << 2), ((x + halfWidth) << 2), ((y + halfHeight) << 2),
-        G_TX_RENDERTILE, 0, 0, radiusS, radiusT);
+    gSPTextureRectangle(gfx++, ((x - halfWidth) << 2), ((y - halfHeight) << 2), ((x + halfWidth) << 2),
+                        ((y + halfHeight) << 2), G_TX_RENDERTILE, 0, 0, radiusS, radiusT);
 
     *gfxP = gfx;
 
@@ -444,15 +446,15 @@ void RadialMenu_ReceiveInput(RadialMenu* this, Input* input) {
     f32 stickX = input->cur.stick_x;
     f32 stickY = input->cur.stick_y;
 
-    //PRINTF("stickX=%.2f\nstickY=%.2f\n", stickX, stickY);
-    //PRINTF("fracX=%.2f\nfracY=%.2f\n", ((stickX + 85.0f) / 170.0f), ((stickY + 85.0f) / 170.0f));
+    // PRINTF("stickX=%.2f\nstickY=%.2f\n", stickX, stickY);
+    // PRINTF("fracX=%.2f\nfracY=%.2f\n", ((stickX + 85.0f) / 170.0f), ((stickY + 85.0f) / 170.0f));
 
     s16 cursorRadius = (this->radius / 2);
 
     this->cursorX = this->x + (LERP((cursorRadius * -1), cursorRadius, ((stickX + 85.0f) / 170.0f)));
     this->cursorY = this->y - (LERP((cursorRadius * -1), cursorRadius, ((stickY + 85.0f) / 170.0f)));
 
-    //PRINTF("cursorX=%i\ncursorY=%i\n", this->cursorX, this->cursorY);
+    // PRINTF("cursorX=%i\ncursorY=%i\n", this->cursorX, this->cursorY);
 }
 
 void RadialMenu_UpdateHoveredItem(RadialMenu* this, Input* input) {
@@ -484,19 +486,8 @@ void RadialMenu_UpdateHoveredItem(RadialMenu* this, Input* input) {
 }
 
 u16 sRadialItemButtonTable[RADIAL_ITEM_CONTROL_COUNT] = {
-    BTN_A,
-    BTN_B,
-    BTN_R,
-    BTN_L,
-    BTN_Z,
-    BTN_CUP,
-    BTN_CDOWN,
-    BTN_CLEFT,
-    BTN_CRIGHT,
-    BTN_DUP,
-    BTN_DDOWN,
-    BTN_DLEFT,
-    BTN_DRIGHT,
+    BTN_A,     BTN_B,      BTN_R,   BTN_L,     BTN_Z,     BTN_CUP,    BTN_CDOWN,
+    BTN_CLEFT, BTN_CRIGHT, BTN_DUP, BTN_DDOWN, BTN_DLEFT, BTN_DRIGHT,
 };
 
 void RadialMenu_HandleSelection(RadialMenu* this, Input* input) {
@@ -511,7 +502,8 @@ void RadialMenu_HandleSelection(RadialMenu* this, Input* input) {
     }
 
     for (u8 i = 0; i < RADIAL_ITEM_CONTROL_COUNT; i++) {
-        if (item->controlFlags & sRadialItemButtonTable[i] && CHECK_BTN_ANY(input->press.button, sRadialItemButtonTable[i])) {
+        if (item->controlFlags & sRadialItemButtonTable[i] &&
+            CHECK_BTN_ANY(input->press.button, sRadialItemButtonTable[i])) {
             item->onSelect(sRadialItemButtonTable[i]);
 
             break;

@@ -1,6 +1,5 @@
 #include "parameter_static.h"
 
-
 u64 gHeartEmptyTex[TEX_LEN(u64, gHeartEmptyTex_WIDTH, gHeartEmptyTex_HEIGHT, 8)] = {
 #include "assets/textures/parameter_static/gHeartEmptyTex.ia8.inc.c"
 };
@@ -33,7 +32,8 @@ u64 gDefenseHeartHalfTex[TEX_LEN(u64, gDefenseHeartHalfTex_WIDTH, gDefenseHeartH
 #include "assets/textures/parameter_static/gDefenseHeartHalfTex.ia8.inc.c"
 };
 
-u64 gDefenseHeartThreeQuarterTex[TEX_LEN(u64, gDefenseHeartThreeQuarterTex_WIDTH, gDefenseHeartThreeQuarterTex_HEIGHT, 8)] = {
+u64 gDefenseHeartThreeQuarterTex[TEX_LEN(u64, gDefenseHeartThreeQuarterTex_WIDTH, gDefenseHeartThreeQuarterTex_HEIGHT,
+                                         8)] = {
 #include "assets/textures/parameter_static/gDefenseHeartThreeQuarterTex.ia8.inc.c"
 };
 
@@ -77,7 +77,8 @@ u64 gCarrotIconTex[TEX_LEN(u64, gCarrotIconTex_WIDTH, gCarrotIconTex_HEIGHT, 32)
 #include "assets/textures/parameter_static/gCarrotIconTex.rgba32.inc.c"
 };
 
-u64 gMapDungeonEntranceIconTex[TEX_LEN(u64, gMapDungeonEntranceIconTex_WIDTH, gMapDungeonEntranceIconTex_HEIGHT, 16)] = {
+u64 gMapDungeonEntranceIconTex[TEX_LEN(u64, gMapDungeonEntranceIconTex_WIDTH, gMapDungeonEntranceIconTex_HEIGHT,
+                                       16)] = {
 #include "assets/textures/parameter_static/gMapDungeonEntranceIconTex.rgba16.inc.c"
 };
 

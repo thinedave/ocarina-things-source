@@ -1142,16 +1142,19 @@ void Play_DrawOverlayElements(PlayState* this) {
     RadialMenu_HandleAll(&this->radialMenuCtx, &this->state);
 
     if (CHECK_BTN_ANY(this->state.input[0].press.button, BTN_DUP)) {
-        u8 index = (this->radialMenuCtx.count == 0 ? RadialMenu_Init(&this->radialMenuCtx, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2) : (this->radialMenuCtx.count - 1));
+        u8 index =
+            (this->radialMenuCtx.count == 0 ? RadialMenu_Init(&this->radialMenuCtx, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+                                            : (this->radialMenuCtx.count - 1));
 
         Player_SetCsAction(this, NULL, PLAYER_CSACTION_1);
 
         RadialMenu* menu = this->radialMenuCtx.elements[index];
 
-        //RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
-        //RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
-        //RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
-        //RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM(ITEM_BOMB), G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL, ITEM_ICON_SIZE);
+        // RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
+        // RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
+        // RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
+        // RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM(ITEM_BOMB), G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL,
+        // ITEM_ICON_SIZE);
 
         for (u8 i = 0; i < (ITEM_GRID_ROWS * ITEM_GRID_COLS); i++) {
             ItemID itemID = gSaveContext.save.info.inventory.items[i];
@@ -1160,7 +1163,8 @@ void Play_DrawOverlayElements(PlayState* this) {
                 continue;
             }
 
-            RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM(itemID), G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL, 0, ITEM_ICON_SIZE);
+            RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM(itemID), G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL, 0,
+                                   ITEM_ICON_SIZE);
         }
 
         RadialMenu_Open(menu, 92);
@@ -1169,10 +1173,10 @@ void Play_DrawOverlayElements(PlayState* this) {
     if (CHECK_BTN_ANY(this->state.input[0].press.button, BTN_DRIGHT) && this->radialMenuCtx.count > 0) {
         RadialMenu* menu = this->radialMenuCtx.elements[this->radialMenuCtx.count - 1];
 
-        #define IRANDOM_RANGE(min, max) Math_FRoundF((Rand_ZeroOne() * (((f32)max)-((f32)min))) + (f32)min)
+#define IRANDOM_RANGE(min, max) Math_FRoundF((Rand_ZeroOne() * (((f32)max) - ((f32)min))) + (f32)min)
 
         RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM((ItemID)IRANDOM_RANGE(ITEM_DEKU_STICK, ITEM_SHIELD_DEKU)),
-            G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL, 0, ITEM_ICON_SIZE);
+                               G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL, 0, ITEM_ICON_SIZE);
     }
 
     if (CHECK_BTN_ANY(this->state.input[0].press.button, BTN_DDOWN) && this->radialMenuCtx.count > 0) {
