@@ -1,3 +1,4 @@
+#include "interface.h"
 #include "libc64/malloc.h"
 #include "libc64/math64.h"
 #include "libc64/qrand.h"
@@ -1151,6 +1152,17 @@ void Play_DrawOverlayElements(PlayState* this) {
         //RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
         //RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
         //RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM(ITEM_BOMB), G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL, ITEM_ICON_SIZE);
+
+        for (u8 i = 0; i < (ITEM_GRID_ROWS * ITEM_GRID_COLS); i++) {
+            ItemID itemID = gSaveContext.save.info.inventory.items[i];
+
+            if (itemID == ITEM_NONE) {
+                continue;
+            }
+
+            RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM(itemID), G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL, 0, ITEM_ICON_SIZE);
+        }
+
         RadialMenu_Open(menu, 92);
     }
 
@@ -1159,8 +1171,8 @@ void Play_DrawOverlayElements(PlayState* this) {
 
         #define IRANDOM_RANGE(min, max) Math_FRoundF((Rand_ZeroOne() * (((f32)max)-((f32)min))) + (f32)min)
 
-        RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM((ItemID)IRANDOM_RANGE(ITEM_DEKU_STICK, ITEM_SHIELD_DEKU)), G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL,
-                               ITEM_ICON_SIZE);
+        RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM((ItemID)IRANDOM_RANGE(ITEM_DEKU_STICK, ITEM_SHIELD_DEKU)),
+            G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL, 0, ITEM_ICON_SIZE);
     }
 
     if (CHECK_BTN_ANY(this->state.input[0].press.button, BTN_DDOWN) && this->radialMenuCtx.count > 0) {
@@ -1169,6 +1181,12 @@ void Play_DrawOverlayElements(PlayState* this) {
         Player_SetCsAction(this, NULL, PLAYER_CSACTION_7);
 
         RadialMenu_Close(menu);
+    }
+
+    if (CHECK_BTN_ANY(this->state.input[0].press.button, BTN_DLEFT) && this->radialMenuCtx.count > 0) {
+        RadialMenu* menu = this->radialMenuCtx.elements[this->radialMenuCtx.count - 1];
+
+        RadialMenu_RemoveItem(menu, menu->items.count - 1);
     }
 
     if (this->gameOverCtx.state != GAMEOVER_INACTIVE) {
