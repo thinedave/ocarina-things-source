@@ -53,10 +53,11 @@ typedef struct EnRr {
     /* 0x0374 */ u8 dropType;
     /* 0x0375 */ u8 retreat;
     /* 0x0376 */ u8 stopScroll;
+    /* 0x0377 */ u8 shouldRecover;
     /* 0x0378 */ s16 hasPlayer;
     /* 0x037C */ Vec3f mouthPos;
     /* 0x0388 */ Vec3f effectPos[5];
-    /* 0x03C4 */ char unk_3C4[0x2000]; //! @bug This is a huge amount of wasted memory.
-} EnRr; // size = 0x23C4
+    /* 0x03C4 */ f32 sfxFreq;
+} EnRr; // size = 0x03C8
 
 #endif

@@ -14,6 +14,7 @@
 #include "rand.h"
 #include "rumble.h"
 #include "sfx.h"
+#include "sys_math.h"
 #include "sys_matrix.h"
 #include "terminal.h"
 #include "translation.h"
@@ -26,6 +27,7 @@
 #include "save.h"
 
 #include "assets/objects/object_rr/object_rr.h"
+#include "z_math.h"
 
 #define FLAGS                                                                                 \
     (ACTOR_FLAG_ATTENTION_ENABLED | ACTOR_FLAG_HOSTILE | ACTOR_FLAG_UPDATE_CULLING_DISABLED | \
@@ -35,6 +37,8 @@
 #define RR_MESSAGE_TUNIC (1 << 1)
 #define RR_MOUTH 4
 #define RR_BASE 0
+
+#define RR_JUMP_ROTATE_SPEED (0x0500)
 
 typedef enum EnRrReachState {
     /* 0 */ REACH_NONE,
@@ -76,6 +80,10 @@ void EnRr_InitBodySegments(EnRr* this, PlayState* play);
 
 void EnRr_SetupDamage(EnRr* this);
 void EnRr_SetupDeath(EnRr* this);
+void EnRr_SetupNeutral(EnRr* this);
+void EnRr_SetupPrepareJump(EnRr* this);
+void EnRr_SetupJump(EnRr* this);
+void EnRr_SetupRecover(EnRr* this);
 
 void EnRr_Approach(EnRr* this, PlayState* play);
 void EnRr_Reach(EnRr* this, PlayState* play);
@@ -84,6 +92,9 @@ void EnRr_Damage(EnRr* this, PlayState* play);
 void EnRr_Death(EnRr* this, PlayState* play);
 void EnRr_Retreat(EnRr* this, PlayState* play);
 void EnRr_Stunned(EnRr* this, PlayState* play);
+void EnRr_PrepareJump(EnRr* this, PlayState* play);
+void EnRr_Jump(EnRr* this, PlayState* play);
+void EnRr_Recover(EnRr* this, PlayState* play);
 
 ActorProfile En_Rr_Profile = {
     /**/ ACTOR_EN_RR,
@@ -233,6 +244,132 @@ void EnRr_Move(EnRr* this, f32 speedXZ) {
     Actor_PlaySfx(&this->actor, NA_SE_EN_LIKE_WALK);
 }
 
+void EnRr_RotateToVelocity(EnRr* this) {
+    f32 speedSq = (SQ(this->actor.velocity.x) + SQ(this->actor.velocity.y) + SQ(this->actor.velocity.z));
+    if (speedSq < 0.001f) {
+        return;
+    }
+
+    f32 speedXZ = sqrtf(SQ(this->actor.velocity.x) + SQ(this->actor.velocity.z));
+
+    this->actor.shape.rot.x = (s16)(Math_Atan2S(speedXZ, -(this->actor.velocity.y)) + 0x4000);
+    this->actor.shape.rot.y = Math_Atan2S(this->actor.velocity.z, this->actor.velocity.x);
+    this->actor.shape.rot.z = 0;
+}
+
+void EnRr_SetupRecover(EnRr* this) {
+    this->actionFunc = EnRr_Recover;
+    this->frameCount = 0;
+    this->actor.gravity = -0.4f;
+    this->shouldRecover = false;
+
+    Actor_PlaySfx(&this->actor, NA_SE_PL_BOUND);
+    Actor_PlaySfx(&this->actor, NA_SE_PL_DIVE_BUBBLE);
+}
+
+void EnRr_Recover(EnRr* this, PlayState* play) {
+    if (this->frameCount < 10) {
+        this->actor.shape.yOffset = LERP(this->actor.shape.yOffset, 0.0f, 0.5);
+
+        f32 height = LERP(this->bodySegs[0].heightTarget, -1000.0f, 0.5);
+
+        for (u8 i = 0; i < 5; i++) {
+            this->bodySegs[i].heightTarget = height;
+            this->bodySegs[i].height = this->bodySegs[i].heightTarget;
+        }
+    } else {
+        for (u8 i = 0; i < 5; i++) {
+            this->bodySegs[i].heightTarget += (1000.0f / 10.0f);
+            this->bodySegs[i].height = this->bodySegs[i].heightTarget;
+        }
+    }
+
+    switch (this->frameCount) {
+        case 10:
+            this->actor.shape.rot.x = 0;
+            this->actor.shape.rot.z = 0;
+            break;
+        case 20:
+            EnRr_SetupNeutral(this);
+            return;
+        default:
+            break;
+    }
+}
+
+void EnRr_SetupJump(EnRr* this) {
+    this->actionFunc = EnRr_Jump;
+    this->frameCount = 0;
+    this->sfxFreq = 3.0f;
+    this->actor.gravity = -0.65;
+    this->actor.velocity.y = 15.0f;
+    this->shouldRecover = true;
+
+    Actor_PlaySfx(&this->actor, NA_SE_IT_ROLLING_CUT);
+    Audio_PlaySfxGeneral(NA_SE_EV_FANTOM_WARP_S2, &this->actor.projectedPos, 4,
+        &this->sfxFreq, &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
+
+    this->actor.world.rot.y = this->actor.yawTowardsPlayer;
+}
+
+void EnRr_Jump(EnRr* this, PlayState* play) {
+    this->sfxFreq = MAX(this->sfxFreq - (1.0f / 20.0f), 0.5f);
+
+    f32 height = 0.0;
+
+    if (this->frameCount <= 3) {
+        height = LERP(this->bodySegs[0].heightTarget, 2000.0f, 0.8);
+
+        for (u8 i = 0; i < 5; i++) {
+            this->bodySegs[i].heightTarget = height;
+            this->bodySegs[i].height = this->bodySegs[i].heightTarget;
+        }
+    } else {
+        height = LERP(this->bodySegs[0].heightTarget, 0.0, 0.3);
+
+        for (u8 i = 0; i < 5; i++) {
+            this->bodySegs[i].heightTarget = height;
+            this->bodySegs[i].height = this->bodySegs[i].heightTarget;
+        }
+    }
+
+    Math_StepToS(&this->actor.world.rot.y, this->actor.yawTowardsPlayer, 0x0500);
+    Math_StepToF(&this->actor.shape.yOffset, 5000.0f, 100.0f);
+    EnRr_Move(this, (LERP(0.0f, 10.0f, MIN(this->actor.xzDistToPlayer / 50.0f, 1.0f)) * (1.0f / MAX(this->frameCount - 30, 1))));
+
+    if (this->actor.velocity.y <= 0.1f && this->actor.velocity.y >= -0.1 && this->frameCount > 35) {
+        EnRr_SetupRecover(this);
+        return;
+    }
+
+    EnRr_RotateToVelocity(this);
+}
+
+void EnRr_SetupPrepareJump(EnRr* this) {
+    this->actionFunc = EnRr_PrepareJump;
+    this->frameCount = 0;
+    this->sfxFreq = 1.0f;
+
+    // Actor_PlaySfx(&this->actor, NA_SE_PL_SWORD_CHARGE);
+    Audio_PlaySfxGeneral(NA_SE_EV_FANTOM_WARP_L2, &this->actor.projectedPos, 4,
+        &this->sfxFreq, &gSfxDefaultFreqAndVolScale, &gSfxDefaultReverb);
+}
+
+void EnRr_PrepareJump(EnRr* this, PlayState* play) {
+    this->actor.shape.rot.y += (RR_JUMP_ROTATE_SPEED * (this->frameCount * 0.5));
+    this->actor.world.rot.y = this->actor.shape.rot.y;
+
+    this->sfxFreq += (2.0f / 20.0f);
+
+    for (u8 i = 0; i < 5; i++) {
+        this->bodySegs[i].heightTarget -= (500.0f / 20.0f);
+    }
+
+    if (this->frameCount == 30) {
+        EnRr_SetupJump(this);
+    }
+}
+
 void EnRr_SetupReach(EnRr* this) {
     static f32 segmentHeights[] = { 0.0f, 500.0f, 750.0f, 1000.0f, 1000.0f };
     s32 i;
@@ -347,7 +484,11 @@ void EnRr_SetupReleasePlayer(EnRr* this, PlayState* play) {
     PRINTF(VT_FGCOL(YELLOW) "%s[%d] : Rr_Catch_Cancel" VT_RST "\n", "../z_en_rr.c", 650);
     Actor_SetPlayerKnockbackLarge(play, &this->actor, 4.0f, this->actor.shape.rot.y, 12.0f, 8);
     if (this->actor.colorFilterTimer == 0) {
-        this->actionFunc = EnRr_Approach;
+        if (this->shouldRecover) {
+            EnRr_SetupRecover(this);
+        } else {
+            this->actionFunc = EnRr_Approach;
+        }
         Actor_PlaySfx(&this->actor, NA_SE_EN_LIKE_THROW);
     } else if (this->actor.colChkInfo.health != 0) {
         EnRr_SetupDamage(this);
@@ -603,7 +744,7 @@ void EnRr_Approach(EnRr* this, PlayState* play) {
     Math_SmoothStepToS(&this->actor.shape.rot.y, this->actor.yawTowardsPlayer, 0xA, 0x1F4, 0);
     this->actor.world.rot.y = this->actor.shape.rot.y;
     if ((this->actionTimer == 0) && (this->actor.xzDistToPlayer < 160.0f)) {
-        EnRr_SetupReach(this);
+        EnRr_SetupPrepareJump(this);
     } else if ((this->actor.xzDistToPlayer < 400.0f) && (this->actor.speed == 0.0f)) {
         EnRr_Move(this, 2.0f);
     }

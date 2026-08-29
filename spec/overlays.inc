@@ -31,6 +31,13 @@ beginseg
 endseg
 
 beginseg
+    name "ovl_sfxlist"
+    compress
+    flags OVERLAY
+    include "$(BUILD_DIR)/src/overlays/gamestates/ovl_sfxlist/z_sfxlist.o"
+endseg
+
+beginseg
     name "ovl_kaleido_scope"
     compress
     flags OVERLAY
