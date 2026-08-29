@@ -1223,6 +1223,12 @@ class DListResource(Resource, can_size_be_unknown=True):
         self.target_ucode = target_ucode
         self.ignored_raw_pointers: set[int] = set()
 
+    def set_length(self, length: int):
+        if self.range_end is not None:
+            if length != ((self.range_end - self.range_start) // 8):
+                raise ValueError("length already set and different")
+        self.range_end = self.range_start + length * 8
+
     def try_parse_data(self, memory_context):
         offset = self.range_start
 
@@ -1340,8 +1346,13 @@ class DListResource(Resource, can_size_be_unknown=True):
 
             return pygfxd.gfxd_macro_dflt()
 
+        if self.range_end is None:
+            dlist_data = self.file.data[self.range_start :]
+        else:
+            dlist_data = self.file.data[self.range_start : self.range_end]
+
         size = gfxdis(
-            input_buffer=self.file.data[self.range_start :],
+            input_buffer=dlist_data,
             target=self.target_ucode.gfxd_ucode,
             vtx_callback=vtx_cb,
             timg_callback=timg_cb,
@@ -1448,7 +1459,7 @@ class DListResource(Resource, can_size_be_unknown=True):
                     "gHilite2Tex",  # used as both rgba16 16x16 and rgba16 32x32
                     "gUnknownCircle4Tex",  # used as both i8 16x16 and rgba16 32x32
                     "gLinkChildLowerBootTex",  # used as both ci8 32x32 and ci8 16x16
-                    "gDecorativeFlameMaskTex",  # used as both i4 32x128 and i4 32x64
+                    "gEffFire1Tex",  # used as both i4 32x128 and i4 32x64
                 }
                 if (
                     arg_num == width_arg_i

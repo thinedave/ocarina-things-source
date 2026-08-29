@@ -4932,21 +4932,21 @@ u32 func_80035BFC(PlayState* play, s16 arg1) {
     switch (arg1) {
         case 0:
             if (Flags_GetEventChkInf(EVENTCHKINF_09)) {
-                if (Flags_GetInfTable(INFTABLE_05)) {
+                if (Flags_GetInfTable(INFTABLE_SARIA_SPOKE_IN_HER_HOUSE)) {
                     retTextId = 0x1048;
                 } else {
                     retTextId = 0x1047;
                 }
             } else {
                 if (Flags_GetEventChkInf(EVENTCHKINF_MIDO_DENIED_DEKU_TREE_ACCESS)) {
-                    if (Flags_GetInfTable(INFTABLE_03)) {
+                    if (Flags_GetInfTable(INFTABLE_SARIA_WAS_TOLD_ABOUT_MIDO)) {
                         retTextId = 0x1032;
                     } else {
                         retTextId = 0x1031;
                     }
                 } else {
-                    if (Flags_GetInfTable(INFTABLE_00)) {
-                        if (Flags_GetInfTable(INFTABLE_01)) {
+                    if (Flags_GetInfTable(INFTABLE_SARIA_GREETED_LINK)) {
+                        if (Flags_GetInfTable(INFTABLE_SARIA_NOTICED_FAIRY)) {
                             retTextId = 0x1003;
                         } else {
                             retTextId = 0x1002;
@@ -4966,7 +4966,7 @@ u32 func_80035BFC(PlayState* play, s16 arg1) {
                         retTextId = 0x1045;
                     }
                 } else {
-                    if (Flags_GetEventChkInf(EVENTCHKINF_03)) {
+                    if (Flags_GetEventChkInf(EVENTCHKINF_SARIA_WAS_TOLD_ABOUT_MIDO)) {
                         if (Flags_GetInfTable(INFTABLE_0E)) {
                             retTextId = 0x1034;
                         } else {
@@ -5628,7 +5628,7 @@ u32 func_80035BFC(PlayState* play, s16 arg1) {
             if (!LINK_IS_ADULT) {
                 if (Flags_GetEventChkInf(EVENTCHKINF_TALON_RETURNED_FROM_CASTLE)) {
                     retTextId = 0x2040;
-                } else if (Flags_GetInfTable(INFTABLE_94)) {
+                } else if (Flags_GetInfTable(INFTABLE_INGO_TALKED_TO_CHILD_LINK_BEFORE_TALON_RETURNED)) {
                     retTextId = 0x2040;
                 } else {
                     retTextId = 0x203F;
@@ -5637,7 +5637,7 @@ u32 func_80035BFC(PlayState* play, s16 arg1) {
                 if (!Flags_GetEventChkInf(EVENTCHKINF_EPONA_OBTAINED)) {
                     if (!IS_DAY) {
                         retTextId = 0x204E;
-                    } else if (Flags_GetInfTable(INFTABLE_9A)) {
+                    } else if (Flags_GetInfTable(INFTABLE_INGO_TALKED_TO_ADULT_LINK)) {
                         retTextId = 0x2031;
                     } else {
                         retTextId = 0x2030;
@@ -5659,17 +5659,17 @@ void func_80036E50(u16 textId, s16 arg1) {
         case 0:
             switch (textId) {
                 case 0x1001:
-                    Flags_SetInfTable(INFTABLE_00);
+                    Flags_SetInfTable(INFTABLE_SARIA_GREETED_LINK);
                     return;
                 case 0x1002:
-                    Flags_SetInfTable(INFTABLE_01);
+                    Flags_SetInfTable(INFTABLE_SARIA_NOTICED_FAIRY);
                     return;
                 case 0x1031:
-                    Flags_SetEventChkInf(EVENTCHKINF_03);
-                    Flags_SetInfTable(INFTABLE_03);
+                    Flags_SetEventChkInf(EVENTCHKINF_SARIA_WAS_TOLD_ABOUT_MIDO);
+                    Flags_SetInfTable(INFTABLE_SARIA_WAS_TOLD_ABOUT_MIDO);
                     return;
                 case 0x1047:
-                    Flags_SetInfTable(INFTABLE_05);
+                    Flags_SetInfTable(INFTABLE_SARIA_SPOKE_IN_HER_HOUSE);
                     return;
             }
             return;
@@ -6024,7 +6024,7 @@ s32 func_800374E0(PlayState* play, Actor* actor, u16 textId) {
             if (msgCtx->choiceIndex == 1) {
                 func_80035B18(play, actor, 0x2032);
             }
-            Flags_SetInfTable(INFTABLE_9A);
+            Flags_SetInfTable(INFTABLE_INGO_TALKED_TO_ADULT_LINK);
             ret = 0;
             break;
         case 0x2035:
