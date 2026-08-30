@@ -8315,8 +8315,6 @@ void Player_Action_Idle(Player* this, PlayState* play) {
         }
     }
 
-    Player_DecelerateToZero(this);
-
     if (this->av2.fallDamageStunTimer == 0) {
         if (!Player_TryActionHandlerList(play, this, sActionHandlerListIdle, true)) {
             if (Player_UpdateHostileLockOn(this)) {
@@ -8336,6 +8334,8 @@ void Player_Action_Idle(Player* this, PlayState* play) {
                 return;
             }
 
+            Player_DecelerateToZero(this);
+
             yawDiff = yawTarget - this->actor.shape.rot.y;
 
             if (ABS(yawDiff) > 800) {
@@ -8350,6 +8350,8 @@ void Player_Action_Idle(Player* this, PlayState* play) {
                 func_8083DC54(this, play);
             }
         }
+    } else {
+        Player_DecelerateToZero(this);
     }
 }
 
@@ -9743,7 +9745,7 @@ void Player_Action_Roll(Player* this, PlayState* play) {
                 }
             }
 
-            if ((this->skelAnime.curFrame < 15.0f) || !Player_ActionHandler_7(this, play)) {
+            if (!animFinished || !Player_ActionHandler_7(this, play)) {
                 if (this->skelAnime.curFrame >= 20.0f) {
                     func_8083A060(this, play);
 
@@ -9755,14 +9757,14 @@ void Player_Action_Roll(Player* this, PlayState* play) {
                 // `speedTarget` at this point is the speed that would be used for regular walking.
                 // Rolling speed is 1.5 times faster than what the walking speed would be for the current control stick
                 // input.
-                speedTarget *= 1.5f;
+                speedTarget *= 1.75f;
 
                 if ((speedTarget < 3.0f) ||
                     (this->controlStickDirections[this->controlStickDataIndex] != PLAYER_STICK_DIR_FORWARD)) {
                     speedTarget = 3.0f;
                 }
 
-                func_8083DF68(this, speedTarget, this->actor.shape.rot.y);
+                func_8083DF68(this, speedTarget, yawTarget);
 
                 if (func_8084269C(play, this)) {
                     Actor_PlaySfx_Flagged2(&this->actor, NA_SE_PL_ROLL_DUST - SFX_FLAG);
