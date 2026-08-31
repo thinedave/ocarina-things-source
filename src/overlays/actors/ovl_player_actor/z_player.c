@@ -8083,8 +8083,6 @@ void Player_Action_80840450(Player* this, PlayState* play) {
         func_808401B0(play, this);
     }
 
-    Player_DecelerateToZero(this);
-
     if (!Player_TryActionHandlerList(play, this, sActionHandlerList1, true)) {
         if (!Player_UpdateHostileLockOn(this) &&
             (!Player_FriendlyLockOnOrParallel(this) || (func_80834B5C != this->upperActionFunc))) {
@@ -8150,8 +8148,6 @@ void Player_Action_808407CC(Player* this, PlayState* play) {
         Player_AnimPlayOnce(play, this, Player_GetIdleAnim(this));
     }
 
-    Player_DecelerateToZero(this);
-
     if (!Player_TryActionHandlerList(play, this, sActionHandlerList2, true)) {
         if (Player_UpdateHostileLockOn(this)) {
             func_8083CEAC(this, play);
@@ -8193,12 +8189,16 @@ void Player_Action_808407CC(Player* this, PlayState* play) {
             return;
         }
 
+        Player_DecelerateToZero(this);
+
         temp2 = yawTarget - this->actor.shape.rot.y;
         temp3 = ABS(temp2);
 
         if (temp3 > 800) {
             Player_SetupTurnInPlace(play, this, yawTarget);
         }
+    } else {
+        Player_DecelerateToZero(this);
     }
 }
 
