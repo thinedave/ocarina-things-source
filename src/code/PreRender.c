@@ -12,6 +12,10 @@
 #include "prerender.h"
 #include "printf.h"
 #include "regs.h"
+#include "ultra64/gs2dex.h"
+#include "array_count.h"
+#include "gfxalloc.h"
+#include "sys_ucode.h"
 
 void PreRender_SetValuesSave(PreRender* this, u32 width, u32 height, void* fbuf, void* zbuf, void* cvg) {
     this->widthSave = width;
@@ -837,4 +841,136 @@ void PreRender_ApplyFilters(PreRender* this) {
             PreRender_DivotFilter(this);
         }
     }
+}
+
+static void PreRender_SetSharpenBg(PreRender* this, uObjBg* bg, void* source, s32 frameX, s32 frameY) {
+    bg->s.imageX = 0;
+    bg->s.imageW = this->width * 4 + 1;
+    bg->s.frameX = frameX * 4;
+    bg->s.imageY = 0;
+    bg->s.imageH = this->height * 4 + 1;
+    bg->s.frameY = frameY * 4;
+    bg->s.imagePtr = source;
+    bg->s.imageLoad = G_BGLT_LOADTILE;
+    bg->s.imageFmt = G_IM_FMT_RGBA;
+    bg->s.imageSiz = G_IM_SIZ_16b;
+    bg->s.imagePal = 0;
+    bg->s.imageFlip = 0;
+    bg->s.frameW = this->width * 4;
+    bg->s.frameH = this->height * 4;
+    bg->s.scaleW = 1024;
+    bg->s.scaleH = 1024;
+    bg->s.imageYorig = bg->s.imageY;
+}
+
+static void PreRender_DrawSharpenBlur(PreRender* this, Gfx** gfxp, s32 offset) {
+    Gfx* gfx = *gfxp;
+    s32 frameX[] = { 0, -offset, offset, 0, 0 };
+    s32 frameY[] = { 0, 0, 0, -offset, offset };
+    u8 alpha[] = { 255, 128, 85, 64, 51 };
+    s32 i;
+
+    gDPPipeSync(gfx++);
+    gDPSetOtherMode(gfx++,
+                    G_AD_DISABLE | G_CD_DISABLE | G_CK_NONE | G_TC_FILT | G_TF_POINT | G_TT_NONE | G_TL_TILE |
+                        G_TD_CLAMP | G_TP_NONE | G_CYC_1CYCLE | G_PM_NPRIMITIVE,
+                    G_AC_NONE | G_ZS_PRIM | G_RM_OPA_SURF | G_RM_OPA_SURF2);
+    gDPSetCombineLERP(gfx++, TEXEL0, 0, ENVIRONMENT, 0, 0, 0, 0, ENVIRONMENT, TEXEL0, 0, ENVIRONMENT, 0, 0, 0, 0,
+                      ENVIRONMENT);
+    gDPSetColorImage(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_16b, this->width, this->fbufSave);
+    gDPSetScissor(gfx++, G_SC_NON_INTERLACE, 0, 0, this->width, this->height);
+    gSPLoadUcodeL(gfx++, gspS2DEX2d_fifo);
+    gDPPipeSync(gfx++);
+    gSPObjRenderMode(gfx++, G_OBJRM_ANTIALIAS | G_OBJRM_BILERP);
+
+    for (i = 0; i < ARRAY_COUNT(frameX); i++) {
+        uObjBg* bg = Gfx_Alloc(&gfx, sizeof(uObjBg));
+
+        PreRender_SetSharpenBg(this, bg, this->fbuf, frameX[i], frameY[i]);
+
+        if (i == 1) {
+            gDPPipeSync(gfx++);
+            gDPSetOtherMode(gfx++,
+                            G_AD_NOISE | G_CD_NOISE | G_CK_NONE | G_TC_FILT | G_TF_POINT | G_TT_NONE | G_TL_TILE |
+                                G_TD_CLAMP | G_TP_NONE | G_CYC_1CYCLE | G_PM_NPRIMITIVE,
+                            G_AC_NONE | G_ZS_PRIM | G_RM_CLD_SURF | G_RM_CLD_SURF2);
+        }
+
+        gDPSetEnvColor(gfx++, 255, 255, 255, alpha[i]);
+        gSPBgRect1Cyc(gfx++, bg);
+        gDPPipeSync(gfx++);
+    }
+
+    gSPLoadUcodeEx(gfx++, SysUcode_GetUCode(), SysUcode_GetUCodeData(), 0x800);
+    gDPPipeSync(gfx++);
+    gDPSetColorImage(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_16b, this->width, this->fbuf);
+    *gfxp = gfx;
+}
+
+static void PreRender_SharpenPass(PreRender* this, Gfx** gfxp, void* source, void* blur, void* destination,
+                                  u8 strength) {
+    Gfx* gfx = *gfxp;
+    s32 rowsPerStrip = TMEM_SIZE / (this->width * G_IM_SIZ_16b_BYTES * 2);
+    s32 centerLineWords = ((this->width * G_IM_SIZ_16b_LINE_BYTES) + 7) >> 3;
+    s32 blurTmem = centerLineWords * rowsPerStrip;
+    s32 rowsRemaining = this->height;
+    s32 curRow = 0;
+
+    gDPPipeSync(gfx++);
+    gDPSetOtherMode(gfx++,
+                    G_AD_DISABLE | G_CD_DISABLE | G_CK_NONE | G_TC_FILT | G_TF_POINT | G_TT_NONE | G_TL_TILE |
+                        G_TD_CLAMP | G_TP_NONE | G_CYC_2CYCLE | G_PM_NPRIMITIVE,
+                    G_AC_NONE | G_ZS_PRIM | G_RM_OPA_SURF | G_RM_OPA_SURF2);
+    gDPSetPrimColor(gfx++, 0, 0, strength, strength, strength, 255);
+    gDPSetCombineLERP(gfx++, TEXEL0, TEXEL1, PRIMITIVE, TEXEL0, 0, 0, 0, TEXEL0, 0, 0, 0, COMBINED, 0, 0, 0, COMBINED);
+    gDPSetColorImage(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_16b, this->width, destination);
+    gDPSetScissor(gfx++, G_SC_NON_INTERLACE, 0, 0, this->width, this->height);
+
+    while (rowsRemaining > 0) {
+        s32 rows = MIN(rowsRemaining, rowsPerStrip);
+        s32 lastRow = curRow + rows - 1;
+
+        gDPLoadMultiTile(gfx++, source, 0, G_TX_RENDERTILE, G_IM_FMT_RGBA, G_IM_SIZ_16b, this->width, this->height, 0,
+                         curRow, this->width - 1, lastRow, 0, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP,
+                         G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
+        gDPLoadMultiTile(gfx++, blur, blurTmem, 1, G_IM_FMT_RGBA, G_IM_SIZ_16b, this->width, this->height, 0, curRow,
+                         this->width - 1, lastRow, 0, G_TX_NOMIRROR | G_TX_CLAMP, G_TX_NOMIRROR | G_TX_CLAMP,
+                         G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
+        gSPTextureRectangle(gfx++, 0, curRow << 2, this->width << 2, (lastRow + 1) << 2, G_TX_RENDERTILE, 0,
+                            curRow << 5, 1 << 10, 1 << 10);
+
+        rowsRemaining -= rows;
+        curRow += rows;
+    }
+
+    gDPPipeSync(gfx++);
+    gDPSetColorImage(gfx++, G_IM_FMT_RGBA, G_IM_SIZ_16b, this->width, this->fbuf);
+    *gfxp = gfx;
+}
+
+void PreRender_DrawSharpen(PreRender* this, Gfx** gfxp, f32 contrast, f32 distance) {
+    f32 sampleDistance;
+    s32 offset;
+    s32 strength;
+
+    if (this->width < 2 || this->height < 2 || this->fbuf == NULL || this->fbufSave == NULL || !(contrast > 0.0f) ||
+        (!(distance > 0.0f) && !(distance < 0.0f))) {
+        return;
+    }
+
+    sampleDistance = MIN(fabsf(distance), MIN(this->width, this->height) - 1);
+    offset = (s32)(sampleDistance + 0.5f);
+
+    if (offset == 0) {
+        return;
+    }
+
+    strength = (s32)((contrast / (contrast + 1.0f)) * 255.0f);
+
+    if (strength == 0) {
+        return;
+    }
+
+    PreRender_DrawSharpenBlur(this, gfxp, offset);
+    PreRender_SharpenPass(this, gfxp, this->fbuf, this->fbufSave, this->fbuf, strength);
 }

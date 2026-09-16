@@ -101,7 +101,13 @@ s32 D_8012D1F4 = 0; // unused
 
 Input* D_8012D1F8 = NULL;
 
+static struct {
+    f32 contrast;
+    f32 distance;
+} sSharpenRequest;
+
 void Play_SpawnScene(PlayState* this, s32 sceneId, s32 spawn);
+void Play_DrawSharpen(PlayState* this, f32 contrast, f32 distance);
 
 // This macro prints the number "1" with a file and line number if R_ENABLE_PLAY_LOGS is enabled.
 // For example, it can be used to trace the play state execution at a high level.
@@ -1282,6 +1288,12 @@ void Play_Draw(PlayState* this) {
             R_PAUSE_BG_PRERENDER_STATE = PAUSE_BG_PRERENDER_OFF;
         }
 
+        if (sSharpenRequest.contrast > 0.0f || sSharpenRequest.distance != 0.0f) {
+                Play_DrawSharpen(this, sSharpenRequest.contrast, sSharpenRequest.distance);
+                sSharpenRequest.contrast = 0.0f;
+                sSharpenRequest.distance = 0.0f;
+            }
+
         if (R_PAUSE_BG_PRERENDER_STATE == PAUSE_BG_PRERENDER_READY) {
             Gfx* gfxP = POLY_OPA_DISP;
 
@@ -2015,4 +2027,35 @@ s32 func_800C0DB4(PlayState* this, Vec3f* pos) {
     } else {
         return false;
     }
+}
+
+void Play_RequestSharpen(f32 contrast, f32 distance) {
+    sSharpenRequest.contrast = contrast;
+    sSharpenRequest.distance = distance;
+}
+
+void Play_DrawSharpen(PlayState* this, f32 contrast, f32 distance) {
+    GraphicsContext* gfxCtx = this->state.gfxCtx;
+    Gfx* gfx;
+    Gfx* gfxHead;
+
+    if (!(contrast > 0.0f) || (!(distance > 0.0f) && !(distance < 0.0f))) {
+        return;
+    }
+
+    OPEN_DISPS(gfxCtx, __FILE__, __LINE__);
+
+    gfxHead = POLY_OPA_DISP;
+    gfx = Gfx_Open(gfxHead);
+    gSPDisplayList(OVERLAY_DISP++, gfx);
+
+    this->pauseBgPreRender.fbuf = gfxCtx->curFrameBuffer;
+    this->pauseBgPreRender.fbufSave = (u16*)gZBuffer;
+    PreRender_DrawSharpen(&this->pauseBgPreRender, &gfx, contrast, distance);
+
+    gSPEndDisplayList(gfx++);
+    Gfx_Close(gfxHead, gfx);
+    POLY_OPA_DISP = gfx;
+
+    CLOSE_DISPS(gfxCtx, __FILE__, __LINE__);
 }

@@ -11677,10 +11677,29 @@ static f32 sFloorConveyorSpeeds[CONVEYOR_SPEED_MAX - 1] = {
     3.0f, // CONVEYOR_SPEED_FAST
 };
 
+static f32 sSharpenContrast = 0.0f;
+static f32 sSharpenDistance = 0.0f;
+
+#define SHARPEN_STEP 0.15f
+
 void Player_UpdateCommon(Player* this, PlayState* play, Input* input) {
     s32 pad;
 
     sControlInput = input;
+
+    if (CHECK_BTN_ANY(sControlInput->cur.button, BTN_DLEFT)) {
+        sSharpenContrast = MAX(sSharpenContrast - SHARPEN_STEP, 0.0f);
+    } else if (CHECK_BTN_ANY(sControlInput->cur.button, BTN_DRIGHT)) {
+        sSharpenContrast += SHARPEN_STEP;
+    }
+
+    if (CHECK_BTN_ANY(sControlInput->cur.button, BTN_DDOWN)) {
+        sSharpenDistance = MAX(sSharpenDistance - SHARPEN_STEP, 0.0f);
+    } else if (CHECK_BTN_ANY(sControlInput->cur.button, BTN_DUP)) {
+        sSharpenDistance += SHARPEN_STEP;
+    }
+
+    Play_RequestSharpen(sSharpenContrast, sSharpenDistance);
 
     if (this->unk_A86 < 0) {
         this->unk_A86++;

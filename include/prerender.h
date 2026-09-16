@@ -40,5 +40,7 @@ void func_800C213C(PreRender* this, Gfx** gfxP);
 void PreRender_RestoreFramebuffer(PreRender* this, Gfx** gfxP);
 void PreRender_CopyImageRegion(PreRender* this, Gfx** gfxP);
 void PreRender_ApplyFilters(PreRender* this);
+void Play_RequestSharpen(f32 contrast, f32 distance);
+void PreRender_DrawSharpen(PreRender* this, Gfx** gfxp, f32 contrast, f32 distance);
 
 #endif
