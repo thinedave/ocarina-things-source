@@ -1,6 +1,7 @@
 #ifndef PLAY_STATE_H
 #define PLAY_STATE_H
 
+#include "pause_manager.h"
 #include "ultra64.h"
 
 #include "prerender.h"
@@ -132,6 +133,7 @@ typedef struct PlayState {
     /* 0x1242C */ SceneTableEntry* loadedScene;
     /* 0x12430 */ char unk_12430[0xE8];
     RadialMenuContext radialMenuCtx;
+    PauseManager pause;
 } PlayState; // size = 0x12518
 
 extern Mtx D_01000000; // billboardMtx

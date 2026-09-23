@@ -120,7 +120,7 @@ void Fault_WaitForInputImpl(void) {
 }
 
 void Fault_WaitForInput(void) {
-    Fault_WaitForInputImpl();
+    //Fault_WaitForInputImpl();
 }
 
 void Fault_DrawRec(s32 x, s32 y, s32 w, s32 h, u16 color) {
@@ -207,7 +207,7 @@ void* Fault_PrintCallbackDraw(void* arg, const char* str, size_t len) {
             coords->x = 22;
             coords->y += 8;
             if (coords->y > 208) {
-                Fault_WaitForInputImpl();
+                //Fault_WaitForInputImpl();
                 Fault_DrawRecBlack(22, 16, 276, 208);
                 coords->y = 16;
             }

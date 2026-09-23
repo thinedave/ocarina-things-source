@@ -11,7 +11,11 @@
 #include "gfx_setupdl.h"
 #include "assets/objects/gameplay_keep/shopkeeper_controls_tex.h"
 #include "assets/textures/parameter_static/parameter_static.h"
+#include "dma.h"
+#include "item.h"
+#include "libc64/malloc.h"
 #include "printf.h"
+#include "segment_symbols.h"
 #include "sys_math.h"
 #include "ultra64/gbi.h"
 #include "z_lib.h"
@@ -20,28 +24,15 @@
 #include "play_state.h"
 #include "libc/assert.h"
 #include "game.h"
+#include "libu64/gfxprint.h"
 
 #pragma region macros
-// This doesn't already exist for some reason
-#ifndef ZELDA_ARENA_REALLOC
-#ifdef DEBUG_FEATURES
-#define ZELDA_ARENA_REALLOC(ptr, size, file, line) ZeldaArena_ReallocDebug(ptr, size, file, line)
-#else
-#define ZELDA_ARENA_REALLOC(ptr, size, file, line) ZeldaArena_Realloc(ptr, size)
-#endif
-#endif
-
 #define RADIAL_MENU_RADIUS_CLOSED 0
+#define RADIAL_MENU_BACKGROUND_INSET 32.0f
 #define RADIAL_MENU_STICK_DEADZONE 20.0f
-#define RADIAL_ITEM_INVALID UINT8_MAX
-
-#define RADIAL_MENU_REALLOC_ITEMS(this)                                                                         \
-    ZELDA_ARENA_REALLOC((this)->items.elements,                                                                 \
-                        sizeof(RadialMenuItem) * ((this)->items.count > 0 ? (this)->items.count : 1), __FILE__, \
-                        __LINE__)
-#define RADIAL_MENU_SYNC_TEX(item) \
-    DMA_REQUEST_SYNC((item)->texSegment, (uintptr_t)(item)->texture, (item)->texLen, __FILE__, __LINE__)
-
+#define CURSOR_SPEED 0.6f
+#define MOVE_SPEED 0.25f
+#define RADIAL_MENU_ITEM_CAPACITY 32
 #define RADIAL_DO_NOTHING
 
 #define BUILD_SIZ_INFO(siz)                                                       \
@@ -51,6 +42,20 @@
 #pragma endregion
 
 #pragma region statics
+u8* gItemIconStatic;
+u8* gItemIcon24Static;
+
+static DmaRequest sItemIconStaticDmaRequest;
+static OSMesgQueue sItemIconStaticLoadQueue;
+static OSMesg sItemIconStaticLoadMsg;
+static u8 sItemIconStaticLoading;
+static u8 sItemIconStaticValid;
+static DmaRequest sItemIcon24StaticDmaRequest;
+static OSMesgQueue sItemIcon24StaticLoadQueue;
+static OSMesg sItemIcon24StaticLoadMsg;
+static u8 sItemIcon24StaticLoading;
+static u8 sItemIcon24StaticValid;
+
 static struct {
     u8 loadBlock;
     u8 incr;
@@ -65,16 +70,72 @@ static struct {
 };
 #pragma endregion
 
-void RadialMenu_Closed(RadialMenu* this, GameState* state);
-void RadialMenu_Opened(RadialMenu* this, GameState* state);
-void RadialMenu_Closing(RadialMenu* this, GameState* state);
-void RadialMenu_Opening(RadialMenu* this, GameState* state);
-
 void RadialMenu_ReceiveInput(RadialMenu* this, Input* input);
 void RadialMenu_UpdateHoveredItem(RadialMenu* this, Input* input);
-void RadialMenu_HandleSelection(RadialMenu* this, Input* input);
+void RadialMenu_HandleSelection(RadialMenu* this, Input* input, GameState* state);
+void RadialMenu_ProcessItemIconStatic(RadialMenuContext* this);
 
-u8 RadialMenu_Init(RadialMenuContext* radialMenuCtx, s16 x, s16 y) {
+void RadialMenuContext_Init(RadialMenuContext* this) {
+    size_t itemIconStaticSize;
+    size_t itemIcon24StaticSize;
+    s32 dmaResult;
+
+    this->count = 0;
+    this->itemIconStatic = gItemIconStatic;
+    this->itemIconStaticLoading = sItemIconStaticLoading;
+    this->itemIconStaticValid = sItemIconStaticValid;
+    this->itemIcon24Static = gItemIcon24Static;
+    this->itemIcon24StaticLoading = sItemIcon24StaticLoading;
+    this->itemIcon24StaticValid = sItemIcon24StaticValid;
+
+    if (gItemIconStatic == NULL) {
+        itemIconStaticSize = (uintptr_t)_icon_item_staticSegmentRomEnd - (uintptr_t)_icon_item_staticSegmentRomStart;
+        gItemIconStatic = SYSTEM_ARENA_MALLOC(itemIconStaticSize, __FILE__, __LINE__);
+
+        ASSERT(gItemIconStatic != NULL, "gItemIconStatic failed to malloc!", __FILE__, __LINE__);
+
+        osCreateMesgQueue(&sItemIconStaticLoadQueue, &sItemIconStaticLoadMsg, 1);
+        dmaResult = DMA_REQUEST_ASYNC(&sItemIconStaticDmaRequest, gItemIconStatic,
+                                      (uintptr_t)_icon_item_staticSegmentRomStart, itemIconStaticSize, 0,
+                                      &sItemIconStaticLoadQueue, NULL, __FILE__, __LINE__);
+
+        if (dmaResult == 0) {
+            sItemIconStaticLoading = 1;
+        } else {
+            SYSTEM_ARENA_FREE(gItemIconStatic, __FILE__, __LINE__);
+            gItemIconStatic = NULL;
+        }
+    }
+
+    if (gItemIcon24Static == NULL) {
+        itemIcon24StaticSize = (uintptr_t)_icon_item_24_staticSegmentRomEnd -
+                               (uintptr_t)_icon_item_24_staticSegmentRomStart;
+        gItemIcon24Static = SYSTEM_ARENA_MALLOC(itemIcon24StaticSize, __FILE__, __LINE__);
+
+        ASSERT(gItemIcon24Static != NULL, "gItemIcon24Static failed to malloc!", __FILE__, __LINE__);
+
+        osCreateMesgQueue(&sItemIcon24StaticLoadQueue, &sItemIcon24StaticLoadMsg, 1);
+        dmaResult = DMA_REQUEST_ASYNC(&sItemIcon24StaticDmaRequest, gItemIcon24Static,
+                                      (uintptr_t)_icon_item_24_staticSegmentRomStart, itemIcon24StaticSize, 0,
+                                      &sItemIcon24StaticLoadQueue, NULL, __FILE__, __LINE__);
+
+        if (dmaResult == 0) {
+            sItemIcon24StaticLoading = 1;
+        } else {
+            SYSTEM_ARENA_FREE(gItemIcon24Static, __FILE__, __LINE__);
+            gItemIcon24Static = NULL;
+        }
+    }
+
+    this->itemIconStatic = gItemIconStatic;
+    this->itemIconStaticLoading = sItemIconStaticLoading;
+    this->itemIconStaticValid = sItemIconStaticValid;
+    this->itemIcon24Static = gItemIcon24Static;
+    this->itemIcon24StaticLoading = sItemIcon24StaticLoading;
+    this->itemIcon24StaticValid = sItemIcon24StaticValid;
+}
+
+u8 RadialMenu_Init(RadialMenuContext* radialMenuCtx, f32 x, f32 y) {
     if (radialMenuCtx->count == RADIAL_COUNT_MAX) {
         return RADIAL_COUNT_MAX;
     }
@@ -84,9 +145,11 @@ u8 RadialMenu_Init(RadialMenuContext* radialMenuCtx, s16 x, s16 y) {
     ASSERT(this != NULL, "RadialMenu failed to malloc!", __FILE__, __LINE__);
 
     this->state = RADIAL_MENU_NOTHING;
+    this->context = radialMenuCtx;
 
     this->items.count = 0;
-    this->items.elements = ZELDA_ARENA_MALLOC(sizeof(RadialMenuItem), __FILE__, __LINE__);
+    this->items.capacity = RADIAL_MENU_ITEM_CAPACITY;
+    this->items.elements = ZELDA_ARENA_MALLOC(sizeof(RadialMenuItem) * this->items.capacity, __FILE__, __LINE__);
 
     ASSERT(this->items.elements != NULL, "RadialMenu->items.elements failed to malloc!", __FILE__, __LINE__);
 
@@ -96,11 +159,17 @@ u8 RadialMenu_Init(RadialMenuContext* radialMenuCtx, s16 x, s16 y) {
     this->targetRadius = RADIAL_MENU_RADIUS_CLOSED;
     this->x = x;
     this->y = y;
+    this->targetX = x;
+    this->targetY = y;
     this->update = RadialMenu_Closed;
     this->cursorX = x;
     this->cursorY = y;
     this->prevRadius = RADIAL_MENU_RADIUS_CLOSED;
     this->targetAlpha = 0;
+
+    this->openRequested = 0;
+    this->acceptingInput = 0;
+    this->shouldDraw = 0;
 
     u8 index = radialMenuCtx->count;
 
@@ -110,19 +179,14 @@ u8 RadialMenu_Init(RadialMenuContext* radialMenuCtx, s16 x, s16 y) {
     return index;
 }
 
-u8 RadialMenu_AddItem(RadialMenu* this, void* texture, u8 texFormat, u8 texPixelSize, u8 texWidth, u8 texHeight,
-                      RadialMenuItemSelectFunc onSelect, u16 controlFlags) {
+u8 RadialMenu_AddItem(RadialMenu* this, void* texture, u8 texFormat, u8 texPixelSize, u8 texWidth, u8 texHeight, RadialMenuItemSelectFunc onSelect, u16 controlFlags, RadialMenuItemPostDrawFunc postDraw, RadialMenuItemPostDrawFunc preDraw) {
     u8 index = this->items.count;
 
-    if (index >= (RADIAL_ITEM_INVALID - 1)) {
+    if (index >= this->items.capacity) {
         return RADIAL_ITEM_INVALID;
     }
 
     this->items.count++;
-
-    this->items.elements = RADIAL_MENU_REALLOC_ITEMS(this);
-
-    ASSERT(this->items.elements != NULL, "RadialMenu->items.elements failed to realloc!", __FILE__, __LINE__);
 
     RadialMenuItem* item = &this->items.elements[index];
     item->state = RADIAL_ITEM_NOTHING;
@@ -133,36 +197,14 @@ u8 RadialMenu_AddItem(RadialMenu* this, void* texture, u8 texFormat, u8 texPixel
     item->y = 0;
     item->scale = 1.0f;
     item->onSelect = onSelect;
-    item->texSegment = NULL;
-    item->texLen = 0;
+    item->postDraw = postDraw;
+    item->preDraw = preDraw;
     item->texFormat = texFormat;
     item->texPixelSize = texPixelSize;
     item->angle = ((s16)(((u32)index * 0x10000) / this->items.count) + 0x3FFF);
     item->controlFlags = controlFlags;
-
-    return index;
-}
-
-u8 RadialMenu_AddItemSync(RadialMenu* this, uintptr_t textureVrom, u8 texFormat, u8 texPixelSize, u8 texWidth,
-                          u8 texHeight, RadialMenuItemSelectFunc onSelect, u16 controlFlags, size_t texLen) {
-    u8 index = RadialMenu_AddItem(this, (void*)textureVrom, texFormat, texPixelSize, texWidth, texHeight, onSelect,
-                                  controlFlags);
-
-    if (index == RADIAL_ITEM_INVALID) {
-        return RADIAL_ITEM_INVALID;
-    }
-
-    RadialMenuItem* item = &this->items.elements[index];
-
-    item->texLen = texLen;
-
-    item->texSegment = ZELDA_ARENA_MALLOC(item->texLen, __FILE__, __LINE__);
-
-    ASSERT(item->texSegment != NULL, "RadialItem->texSegment failed to malloc!", __FILE__, __LINE__);
-
-    DMA_REQUEST_SYNC(item->texSegment, (uintptr_t)item->texture, item->texLen, __FILE__, __LINE__);
-
-    item->state |= RADIAL_ITEM_TEX_SYNCED;
+    item->alpha = 255;
+    item->inventorySlot = SLOT_NONE;
 
     return index;
 }
@@ -178,64 +220,64 @@ void RadialMenu_RemoveItem(RadialMenu* this, u8 index) {
         return;
     }
 
-    if (this->items.elements[index].state & RADIAL_ITEM_TEX_SYNCED) {
-        ZELDA_ARENA_FREE(this->items.elements[index].texSegment, __FILE__, __LINE__);
-        this->items.elements[index].texSegment = NULL;
-    }
-
     RadialMenu_ReorderFromIndex(this, index);
 
     this->items.count--;
 
-    this->items.elements = RADIAL_MENU_REALLOC_ITEMS(this);
-
-    ASSERT(this->items.elements != NULL, "RadialMenu->items.elements failed to realloc!", __FILE__, __LINE__);
-
-    // We do not need to bother nullifying or zeroing out any data because it cannot be accessed from here on and will
-    // be overwritten if another item is added
+    // The array remains at its original capacity so adding and removing items does not fragment ZeldaArena.
 }
 
-void RadialMenu_Destroy(RadialMenu* this, RadialMenuContext* radialMenuCtx, u8* handlerIndex) {
-    for (u8 i = 0; i < this->items.count; i++) {
-        ZELDA_ARENA_FREE(this->items.elements[i].texSegment, __FILE__, __LINE__);
-
-        this->items.elements[i].texSegment = NULL;
-    }
-
+void RadialMenu_Destroy(RadialMenu* this, RadialMenuContext* radialMenuCtx, u8 handlerIndex) {
     ZELDA_ARENA_FREE(this->items.elements, __FILE__, __LINE__);
 
     this->items.elements = NULL;
 
-    if (handlerIndex != NULL) {
-        radialMenuCtx->elements[*handlerIndex] = NULL;
+    radialMenuCtx->elements[handlerIndex] = NULL;
 
-        for (u8 i = *handlerIndex; i < (radialMenuCtx->count - 1); i++) {
-            radialMenuCtx->elements[i] = radialMenuCtx->elements[i + 1];
-        }
-
-        (*handlerIndex)--;
-        radialMenuCtx->count--;
+    for (u8 i = handlerIndex; i < (radialMenuCtx->count - 1); i++) {
+        radialMenuCtx->elements[i] = radialMenuCtx->elements[i + 1];
     }
 
-    ZELDA_ARENA_FREE(this, __FILE__, __LINE__);
+    radialMenuCtx->count--;
 
-    this = NULL;
+    ZELDA_ARENA_FREE(this, __FILE__, __LINE__);
 }
 
 void RadialMenu_Open(RadialMenu* this, u16 radius) {
     this->prevRadius = this->radius;
     this->targetRadius = radius;
     this->targetAlpha = 255;
-    this->update = RadialMenu_Opening;
+    this->acceptingInput = 1;
+    this->shouldDraw = 1;
+
+    if (this->context->itemIconStaticValid) {
+        this->update = RadialMenu_Opening;
+    } else if (this->context->itemIconStaticLoading) {
+        this->openRequested = 1;
+    }
 }
 
 void RadialMenu_Close(RadialMenu* this) {
     this->targetRadius = 0;
     this->targetAlpha = 0;
+    this->openRequested = 0;
+    this->acceptingInput = 0;
     this->update = RadialMenu_Closing;
 }
 
-void RadialMenu_Update(RadialMenu* this, GameState* state, RadialMenuContext* radialMenuCtx, u8* handlerIndex) {
+void RadialMenu_MoveToTarget(RadialMenu* this) {
+    this->x = LERP(this->x, this->targetX, MOVE_SPEED);
+    this->y = LERP(this->y, this->targetY, MOVE_SPEED);
+}
+
+s32 RadialMenu_Update(RadialMenu* this, GameState* state, RadialMenuContext* radialMenuCtx, u8 handlerIndex) {
+    RadialMenu_MoveToTarget(this);
+
+    if (this->openRequested && radialMenuCtx->itemIconStaticValid) {
+        this->openRequested = 0;
+        this->update = RadialMenu_Opening;
+    }
+
     this->update(this, state);
 
     RadialMenu_UpdateHoveredItem(this, &state->input[0]);
@@ -243,14 +285,35 @@ void RadialMenu_Update(RadialMenu* this, GameState* state, RadialMenuContext* ra
     if (this->state & RADIAL_MENU_DESTROY) {
         RadialMenu_Destroy(this, radialMenuCtx, handlerIndex);
 
-        return;
+        return true;
     }
 
-    RadialMenu_HandleSelection(this, &state->input[0]);
+    RadialMenu_HandleSelection(this, &state->input[0], state);
+
+    return false;
+}
+
+void RadialMenu_ProcessItemIconStatic(RadialMenuContext* this) {
+    if (sItemIconStaticLoading && osRecvMesg(&sItemIconStaticLoadQueue, NULL, OS_MESG_NOBLOCK) == 0) {
+        sItemIconStaticLoading = 0;
+        sItemIconStaticValid = (gItemIconStatic != NULL);
+    }
+
+    if (sItemIcon24StaticLoading && osRecvMesg(&sItemIcon24StaticLoadQueue, NULL, OS_MESG_NOBLOCK) == 0) {
+        sItemIcon24StaticLoading = 0;
+        sItemIcon24StaticValid = (gItemIcon24Static != NULL);
+    }
+
+    this->itemIconStatic = gItemIconStatic;
+    this->itemIconStaticLoading = sItemIconStaticLoading;
+    this->itemIconStaticValid = sItemIconStaticValid;
+    this->itemIcon24Static = gItemIcon24Static;
+    this->itemIcon24StaticLoading = sItemIcon24StaticLoading;
+    this->itemIcon24StaticValid = sItemIcon24StaticValid;
 }
 
 void RadialMenu_DrawBackground(RadialMenu* this, GameState* state, Gfx** gfxP) {
-    if (this->radius == 0) {
+    if (this->radius <= RADIAL_MENU_BACKGROUND_INSET) {
         return;
     }
 
@@ -267,8 +330,9 @@ void RadialMenu_DrawBackground(RadialMenu* this, GameState* state, Gfx** gfxP) {
     gDPSetPrimColor(gfx++, 0, 0, 0, 0, 0, alpha);
     gDPSetEnvColor(gfx++, 0, 0, 0, alpha);
 
-    u16 halfRadius = (this->radius / 2);
-    u16 radiusST = ((64.0f / (f32)this->radius) * 1024.0f);
+    u16 radius = (this->radius - RADIAL_MENU_BACKGROUND_INSET);
+    u16 halfRadius = (radius / 2);
+    u16 radiusST = ((64.0f / (f32)radius) * 1024.0f);
 
     // Top left
     gDPLoadTextureBlock(gfx++, gRadialMenuBackgroundTex, G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, 0,
@@ -300,8 +364,8 @@ void RadialMenu_DrawCursor(RadialMenu* this, GameState* state, Gfx** gfxP) {
     gDPLoadTextureBlock(gfx++, gControlStickTex, G_IM_FMT_IA, G_IM_SIZ_8b, 16, 16, 0, G_TX_NOMIRROR | G_TX_WRAP,
                         G_TX_NOMIRROR | G_TX_WRAP, 4, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
 
-    gSPTextureRectangle(gfx++, ((this->cursorX - 8) << 2), ((this->cursorY - 8) << 2), ((this->cursorX + 8) << 2),
-                        ((this->cursorY + 8) << 2), G_TX_RENDERTILE, 0, 0, (1 << 10), (1 << 10));
+    gSPTextureRectangle(gfx++, ((s16)(this->cursorX - 8) << 2), ((s16)(this->cursorY - 8) << 2), ((s16)(this->cursorX + 8) << 2),
+                        ((s16)(this->cursorY + 8) << 2), G_TX_RENDERTILE, 0, 0, (1 << 10), (1 << 10));
 
     *gfxP = gfx;
 
@@ -317,16 +381,12 @@ void RadialMenu_DrawItem(RadialMenu* this, GameState* state, RadialMenuItem* ite
 
     gDPSetCombineMode(gfx++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
 
-    gDPSetPrimColor(gfx++, 0, 0, 255, 255, 255, this->alpha);
-    gDPSetEnvColor(gfx++, 255, 255, 255, this->alpha);
+    u8 alpha = (item->alpha * (this->alpha / 255.0f));
 
-    void* texture = item->texture;
+    gDPSetPrimColor(gfx++, 0, 0, 255, 255, 255, alpha);
+    gDPSetEnvColor(gfx++, 255, 255, 255, alpha);
 
-    if (item->state & RADIAL_ITEM_TEX_SYNCED) {
-        texture = item->texSegment;
-    }
-
-    gDPSetTextureImage(gfx++, item->texFormat, sImgSizInfo[item->texPixelSize].loadBlock, 1, texture);
+    gDPSetTextureImage(gfx++, item->texFormat, sImgSizInfo[item->texPixelSize].loadBlock, 1, item->texture);
 
     gDPSetTile(gfx++, item->texFormat, sImgSizInfo[item->texPixelSize].loadBlock, 0, 0, G_TX_LOADTILE, 0,
                G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOLOD);
@@ -369,21 +429,48 @@ void RadialMenu_DrawItems(RadialMenu* this, GameState* state, Gfx** gfxP) {
         return;
     }
 
+    f32 radius = (this->radius * 0.5f);
+
     for (u8 i = 0; i < this->items.count; i++) {
         RadialMenuItem* item = &this->items.elements[i];
+        if (item->texture == NULL) {
+            continue;
+        }
+
         s16 targetAngle = (s16)(((u32)i * 0x10000) / this->items.count);
 
-        item->angle = BINANG_LERPIMP(item->angle, targetAngle, 0.1f);
+        item->angle = BINANG_LERPIMP(item->angle, targetAngle, 0.4f);
+        item->x = (this->x + (Math_SinS(item->angle) * radius));
+        item->y = (this->y + (Math_CosS(item->angle) * radius));
 
-        s16 x = (this->x + (Math_SinS(item->angle) * (this->radius - 32)));
-        s16 y = (this->y + (Math_CosS(item->angle) * (this->radius - 32)));
+        if (item->preDraw != NULL) {
+            item->preDraw(this, item, state, gfxP);
+        }
 
-        RadialMenu_DrawItem(this, state, item, x, y, i, gfxP);
+        RadialMenu_DrawItem(this, state, item, item->x, item->y, i, gfxP);
+
+        if (item->postDraw != NULL) {
+            item->postDraw(this, item, state, gfxP);
+        }
     }
 }
 
+void RadialMenu_DrawDebug(RadialMenu* this, GameState* state, Gfx** gfxP) {
+    GfxPrint printer;
+
+    GfxPrint_Init(&printer);
+    GfxPrint_Open(&printer, *gfxP);
+
+    GfxPrint_SetColor(&printer, 255, 155, 255, 255);
+    GfxPrint_SetPos(&printer, 2, 10);
+    GfxPrint_Printf(&printer, "TR=%i", this->targetRadius);
+
+    *gfxP = GfxPrint_Close(&printer);
+    GfxPrint_Destroy(&printer);
+}
+
 void RadialMenu_Draw(RadialMenu* this, GameState* state, u8* handlerIndex) {
-    if (this->radius == 0) {
+    if (this->radius == 0 || this->x < -(this->radius + 32) || this->x > (SCREEN_WIDTH + this->radius + 32)) {
         return;
     }
 
@@ -402,6 +489,8 @@ void RadialMenu_Draw(RadialMenu* this, GameState* state, u8* handlerIndex) {
     RadialMenu_DrawItems(this, state, &gfx);
 
     RadialMenu_DrawCursor(this, state, &gfx);
+
+    //RadialMenu_DrawDebug(this, state, &gfx);
 
     gSPEndDisplayList(gfx++);
     gSPBranchList(POLY_OPA_DISP, gfx);
@@ -429,8 +518,8 @@ void RadialMenu_Closing(RadialMenu* this, GameState* state) {
     RadialMenu_ProgressRadius(this);
 
     if (this->radius == this->targetRadius) {
-        this->state |= RADIAL_MENU_DESTROY;
-        // this->update = RadialMenu_Closed;
+        this->shouldDraw = 0;
+        this->update = RadialMenu_Closed;
     }
 }
 
@@ -443,6 +532,12 @@ void RadialMenu_Opened(RadialMenu* this, GameState* state) {
 }
 
 void RadialMenu_ReceiveInput(RadialMenu* this, Input* input) {
+    if (!this->acceptingInput) {
+        this->cursorX = this->x;
+        this->cursorY = this->y;
+        return;
+    }
+
     f32 stickX = input->cur.stick_x;
     f32 stickY = input->cur.stick_y;
 
@@ -451,16 +546,15 @@ void RadialMenu_ReceiveInput(RadialMenu* this, Input* input) {
 
     s16 cursorRadius = (this->radius / 2);
 
-    this->cursorX = this->x + (LERP((cursorRadius * -1), cursorRadius, ((stickX + 85.0f) / 170.0f)));
-    this->cursorY = this->y - (LERP((cursorRadius * -1), cursorRadius, ((stickY + 85.0f) / 170.0f)));
+    this->cursorX = LERP(this->cursorX, this->x + (LERP((cursorRadius * -1), cursorRadius, ((stickX + 85.0f) / 170.0f))), CURSOR_SPEED);
+    this->cursorY = LERP(this->cursorY, this->y - (LERP((cursorRadius * -1), cursorRadius, ((stickY + 85.0f) / 170.0f))), CURSOR_SPEED);
 
     // PRINTF("cursorX=%i\ncursorY=%i\n", this->cursorX, this->cursorY);
 }
 
 void RadialMenu_UpdateHoveredItem(RadialMenu* this, Input* input) {
-    if (this->items.count == 0) {
+    if (this->items.count == 0 || !this->acceptingInput) {
         this->hoveredItemIndex = RADIAL_ITEM_INVALID;
-
         return;
     }
 
@@ -470,7 +564,6 @@ void RadialMenu_UpdateHoveredItem(RadialMenu* this, Input* input) {
 
     if (stickMagnitudeSq < SQ(RADIAL_MENU_STICK_DEADZONE)) {
         this->hoveredItemIndex = RADIAL_ITEM_INVALID;
-
         return;
     }
 
@@ -490,8 +583,8 @@ u16 sRadialItemButtonTable[RADIAL_ITEM_CONTROL_COUNT] = {
     BTN_CLEFT, BTN_CRIGHT, BTN_DUP, BTN_DDOWN, BTN_DLEFT, BTN_DRIGHT,
 };
 
-void RadialMenu_HandleSelection(RadialMenu* this, Input* input) {
-    if (this->hoveredItemIndex == RADIAL_ITEM_INVALID) {
+void RadialMenu_HandleSelection(RadialMenu* this, Input* input, GameState* state) {
+    if (this->hoveredItemIndex == RADIAL_ITEM_INVALID || !this->acceptingInput) {
         return;
     }
 
@@ -504,7 +597,7 @@ void RadialMenu_HandleSelection(RadialMenu* this, Input* input) {
     for (u8 i = 0; i < RADIAL_ITEM_CONTROL_COUNT; i++) {
         if (item->controlFlags & sRadialItemButtonTable[i] &&
             CHECK_BTN_ANY(input->press.button, sRadialItemButtonTable[i])) {
-            item->onSelect(sRadialItemButtonTable[i]);
+            item->onSelect(sRadialItemButtonTable[i], this, item, state);
 
             break;
         }
@@ -512,12 +605,19 @@ void RadialMenu_HandleSelection(RadialMenu* this, Input* input) {
 }
 
 void RadialMenu_HandleAll(RadialMenuContext* radialMenuCtx, GameState* state) {
-    for (u8 i = 0; i < radialMenuCtx->count; i++) {
+    RadialMenu_ProcessItemIconStatic(radialMenuCtx);
+
+    for (u8 i = 0; i < radialMenuCtx->count;) {
         if (radialMenuCtx->elements[i] == NULL) {
             break;
         }
 
-        RadialMenu_Draw(radialMenuCtx->elements[i], state, &i);
-        RadialMenu_Update(radialMenuCtx->elements[i], state, radialMenuCtx, &i);
+        if (radialMenuCtx->elements[i]->shouldDraw) {
+            RadialMenu_Draw(radialMenuCtx->elements[i], state, &i);
+        }
+
+        if (!RadialMenu_Update(radialMenuCtx->elements[i], state, radialMenuCtx, i)) {
+            i++;
+        }
     }
 }

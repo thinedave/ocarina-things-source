@@ -818,6 +818,7 @@ beginseg
     include "$(BUILD_DIR)/data/njpgdspMain.o"
 
     include "$(BUILD_DIR)/src/code/radial_menu.o"
+    include "$(BUILD_DIR)/src/code/pause_manager.o"
 
     // Extra files for non-matching debug builds
 #if DEBUG_FEATURES

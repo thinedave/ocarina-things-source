@@ -51,6 +51,7 @@
 #include "save.h"
 #include "vis.h"
 #include "radial_menu.h"
+#include "pause_manager.h"
 
 #pragma increment_block_number "gc-eu:224 gc-eu-mq:224 gc-jp:224 gc-jp-ce:224 gc-jp-mq:224 gc-us:224 gc-us-mq:224" \
                                "ique-cn:224 ntsc-1.0:240 ntsc-1.1:240 ntsc-1.2:240 pal-1.0:240 pal-1.1:240"
@@ -72,6 +73,8 @@ UNK_TYPE D_8012D1F4 = 0; // unused
 #endif
 
 Input* D_8012D1F8 = NULL;
+
+static FaultAddrConvClient sActorFaultAddrConvClient;
 
 void Play_SpawnScene(PlayState* this, s32 sceneId, s32 spawn);
 
@@ -286,8 +289,50 @@ void Play_Destroy(GameState* thisx) {
 #endif
 
 #if DEBUG_FEATURES
+    Fault_RemoveAddrConvClient(&sActorFaultAddrConvClient);
     Fault_RemoveClient(&D_801614B8);
 #endif
+}
+
+uintptr_t Actor_FaultAddrConv(uintptr_t addr, void* arg) {
+    int actor_id;
+    int n_matches = 0;
+    uintptr_t latest_match;
+
+    // Loop over the actor overlay table
+    for (actor_id = 0; actor_id < ACTOR_ID_MAX; actor_id++) {
+        ActorOverlay* ovlEntry = &gActorOverlayTable[actor_id];
+
+        // If the overlay is currently loaded in memory
+        if (ovlEntry->loadedRamAddr != NULL) {
+            uintptr_t loadedRamAddr = (uintptr_t)ovlEntry->loadedRamAddr;
+
+            uintptr_t vramStart = (uintptr_t)ovlEntry->vramStart;
+            uintptr_t vramEnd = (uintptr_t)ovlEntry->vramEnd;
+
+            uintptr_t ramStart = loadedRamAddr;
+            uintptr_t ramEnd = loadedRamAddr + (vramEnd - vramStart);
+
+            // If the input ram address `addr` falls within the ram range of the overlay
+            if (ramStart <= addr && addr < ramEnd) {
+                // Compute the vram equivalent of the input ram address
+                uintptr_t addr_vram = addr - loadedRamAddr + vramStart;
+
+                n_matches += 1;
+                latest_match = addr_vram;
+            }
+        }
+    }
+
+    // If exactly one overlay matches return the translated vram address
+    if (n_matches == 1) {
+        return latest_match;
+    }
+    // otherwise if 0 matches then nothing was found
+    // or if 2+ matches then something is wrong, don't report an address
+    else {
+        return 0;
+    }
 }
 
 void Play_Init(GameState* thisx) {
@@ -309,7 +354,7 @@ void Play_Init(GameState* thisx) {
         return;
     }
 
-    this->radialMenuCtx.count = 0;
+    PauseManager_Init(&this->pause);
 
 #if PLATFORM_GC && DEBUG_FEATURES
     SystemArena_Display();
@@ -507,6 +552,8 @@ void Play_Init(GameState* thisx) {
 
     Actor_InitContext(this, &this->actorCtx, this->playerEntry);
 
+    Fault_AddAddrConvClient(&sActorFaultAddrConvClient, Actor_FaultAddrConv, NULL);
+
     // Busyloop until the room loads
     while (!Room_ProcessRoomRequest(this, &this->roomCtx)) {
         ; // Empty Loop
@@ -551,6 +598,8 @@ void Play_Init(GameState* thisx) {
         DmaMgr_DmaRomToRam(0x03FEB000, gDebugCutsceneScript, sizeof(sDebugCutsceneScriptBuf));
     }
 #endif
+
+    RadialMenuContext_Init(&this->radialMenuCtx);
 }
 
 void Play_Update(PlayState* this) {
@@ -956,7 +1005,7 @@ void Play_Update(PlayState* this) {
 
             if ((gSaveContext.gameMode == GAMEMODE_NORMAL) && (this->msgCtx.msgMode == MSGMODE_NONE) &&
                 (this->gameOverCtx.state == GAMEOVER_INACTIVE)) {
-                KaleidoSetup_Update(this);
+                //KaleidoSetup_Update(this);
             }
 
             PLAY_LOG(3551);
@@ -1141,57 +1190,7 @@ void Play_DrawOverlayElements(PlayState* this) {
 
     RadialMenu_HandleAll(&this->radialMenuCtx, &this->state);
 
-    if (CHECK_BTN_ANY(this->state.input[0].press.button, BTN_DUP)) {
-        u8 index =
-            (this->radialMenuCtx.count == 0 ? RadialMenu_Init(&this->radialMenuCtx, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
-                                            : (this->radialMenuCtx.count - 1));
-
-        Player_SetCsAction(this, NULL, PLAYER_CSACTION_1);
-
-        RadialMenu* menu = this->radialMenuCtx.elements[index];
-
-        // RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
-        // RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
-        // RadialMenu_AddItem(menu, gMagicMeterEndTex, G_IM_FMT_IA, G_IM_SIZ_8b, 8, 16, NULL);
-        // RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM(ITEM_BOMB), G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL,
-        // ITEM_ICON_SIZE);
-
-        for (u8 i = 0; i < (ITEM_GRID_ROWS * ITEM_GRID_COLS); i++) {
-            ItemID itemID = gSaveContext.save.info.inventory.items[i];
-
-            if (itemID == ITEM_NONE) {
-                continue;
-            }
-
-            RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM(itemID), G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL, 0,
-                                   ITEM_ICON_SIZE);
-        }
-
-        RadialMenu_Open(menu, 92);
-    }
-
-    if (CHECK_BTN_ANY(this->state.input[0].press.button, BTN_DRIGHT) && this->radialMenuCtx.count > 0) {
-        RadialMenu* menu = this->radialMenuCtx.elements[this->radialMenuCtx.count - 1];
-
-#define IRANDOM_RANGE(min, max) Math_FRoundF((Rand_ZeroOne() * (((f32)max) - ((f32)min))) + (f32)min)
-
-        RadialMenu_AddItemSync(menu, GET_ITEM_ICON_VROM((ItemID)IRANDOM_RANGE(ITEM_DEKU_STICK, ITEM_SHIELD_DEKU)),
-                               G_IM_FMT_RGBA, G_IM_SIZ_32b, 32, 32, NULL, 0, ITEM_ICON_SIZE);
-    }
-
-    if (CHECK_BTN_ANY(this->state.input[0].press.button, BTN_DDOWN) && this->radialMenuCtx.count > 0) {
-        RadialMenu* menu = this->radialMenuCtx.elements[this->radialMenuCtx.count - 1];
-
-        Player_SetCsAction(this, NULL, PLAYER_CSACTION_7);
-
-        RadialMenu_Close(menu);
-    }
-
-    if (CHECK_BTN_ANY(this->state.input[0].press.button, BTN_DLEFT) && this->radialMenuCtx.count > 0) {
-        RadialMenu* menu = this->radialMenuCtx.elements[this->radialMenuCtx.count - 1];
-
-        RadialMenu_RemoveItem(menu, menu->items.count - 1);
-    }
+    PauseManager_Update(&this->pause, this);
 
     if (this->gameOverCtx.state != GAMEOVER_INACTIVE) {
         GameOver_FadeInLights(this);

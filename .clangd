@@ -1,0 +1,7 @@
+CompileFlags:
+  Add: [-D_LANGUAGE_C=1]
+  Remove:
+    - -mdivide-breaks
+    - "-fexec-charset=*"
+    - -mno-explicit-relocs
+    - -mno-split-addresses
