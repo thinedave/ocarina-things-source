@@ -19,6 +19,11 @@ typedef struct {
     u8 menuCleanupPending;
     u8 playerInputBlocked;
     u8 questShouldDraw;
+    s8 questCursorSong;
+    s8 questCursorRepeatStateX;
+    s8 questCursorRepeatStateY;
+    s16 questCursorRepeatTimerX;
+    s16 questCursorRepeatTimerY;
 } PauseManager;
 
 void PauseManager_Init(PauseManager* this);

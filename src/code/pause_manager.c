@@ -6,6 +6,7 @@
  */
 
 #include "pause_manager.h"
+#include "array_count.h"
 #include "assets/textures/icon_item_static/icon_item_static.h"
 #include "assets/textures/parameter_static/parameter_static.h"
 #include "attributes.h"
@@ -16,9 +17,12 @@
 #include "player.h"
 #include "printf.h"
 #include "radial_menu.h"
+#include "regs.h"
 #include "controller.h"
 #include "gfx.h"
 #include "item.h"
+#include "message.h"
+#include "ocarina.h"
 #include "save.h"
 #include "sfx.h"
 #include "ultra64/gbi.h"
@@ -289,6 +293,45 @@ static u8 sQuestSongPrimBlue[] = {
     100, 40, 255, 0, 255, 100, 255, 255, 255, 255, 255, 255,
 };
 
+static s16 sQuestSongNoteX[] = {
+    64, 76, 88, 100, 112, 124, 136, 148,
+};
+
+/* Kaleido's R_PAUSE_SONG_OCA_BTN_Y values translated from page space to screen space. */
+static s16 sQuestSongNoteY[] = {
+    198, // OCARINA_BTN_A: -62
+    192, // OCARINA_BTN_C_DOWN: -56
+    185, // OCARINA_BTN_C_RIGHT: -49
+    182, // OCARINA_BTN_C_LEFT: -46
+    177, // OCARINA_BTN_C_UP: -41
+};
+
+static s16 sQuestSongStaffLineY[] = {
+    182,
+    188,
+    194,
+    200,
+};
+
+static PauseQuestRect sQuestSongTrebleClefRect = { 44, 176, 16, 32 };
+
+static u8 sQuestSongStaffLineTex[] = { 0xFF };
+
+static void* sQuestOcarinaButtonTextures[] = {
+    gOcarinaBtnIconATex,
+    gOcarinaBtnIconCDownTex,
+    gOcarinaBtnIconCRightTex,
+    gOcarinaBtnIconCLeftTex,
+    gOcarinaBtnIconCUpTex,
+};
+
+static void* sQuestCursorTextures[] = {
+    gPauseMenuCursorTopLeftTex,
+    gPauseMenuCursorTopRightTex,
+    gPauseMenuCursorBottomLeftTex,
+    gPauseMenuCursorBottomRightTex,
+};
+
 Gfx* Gfx_TextureRGBA32(Gfx* displayListHead, void* texture, s16 textureWidth, s16 textureHeight, s16 rectLeft, s16 rectTop,
                     s16 rectWidth, s16 rectHeight, u16 dsdx, u16 dtdy) {
     gDPLoadTextureBlock(displayListHead++, texture, G_IM_FMT_RGBA, G_IM_SIZ_32b, textureWidth, textureHeight, 0,
@@ -308,6 +351,11 @@ void PauseManager_Init(PauseManager* this) {
     this->menuCleanupPending = 0;
     this->playerInputBlocked = 0;
     this->questShouldDraw = false;
+    this->questCursorSong = 0;
+    this->questCursorRepeatStateX = 0;
+    this->questCursorRepeatStateY = 0;
+    this->questCursorRepeatTimerX = 0;
+    this->questCursorRepeatTimerY = 0;
 }
 
 #define CLOSE_MENU(menu) _DW({              \
@@ -677,6 +725,103 @@ void PauseManager_PollClose(PauseManager* this, PlayState* play) {
     }
 }
 
+static void PauseManager_UpdateQuestCursor(PauseManager* this, PlayState* play) {
+    Input* input = &play->state.input[0];
+    s8 oldCursorSong = this->questCursorSong;
+    s8 newCursorSong = oldCursorSong;
+    s8 moveX = 0;
+    s8 moveY = 0;
+
+    if (newCursorSong < 0 || newCursorSong >= (QUEST_KOKIRI_EMERALD - QUEST_SONG_MINUET)) {
+        newCursorSong = 0;
+    }
+
+    // Match Kaleido's cursor repeat timing: move immediately on a new
+    // direction, then wait for the long initial delay before repeating.
+    if (input->cur.stick_x < -30) {
+        if (this->questCursorRepeatStateX == -1) {
+            this->questCursorRepeatTimerX--;
+            if (this->questCursorRepeatTimerX < 0) {
+                this->questCursorRepeatTimerX = R_PAUSE_STICK_REPEAT_DELAY;
+                moveX = -1;
+            }
+        } else {
+            this->questCursorRepeatTimerX = R_PAUSE_STICK_REPEAT_DELAY_FIRST;
+            this->questCursorRepeatStateX = -1;
+            moveX = -1;
+        }
+    } else if (input->cur.stick_x > 30) {
+        if (this->questCursorRepeatStateX == 1) {
+            this->questCursorRepeatTimerX--;
+            if (this->questCursorRepeatTimerX < 0) {
+                this->questCursorRepeatTimerX = R_PAUSE_STICK_REPEAT_DELAY;
+                moveX = 1;
+            }
+        } else {
+            this->questCursorRepeatTimerX = R_PAUSE_STICK_REPEAT_DELAY_FIRST;
+            this->questCursorRepeatStateX = 1;
+            moveX = 1;
+        }
+    } else {
+        this->questCursorRepeatStateX = 0;
+    }
+
+    if (input->cur.stick_y > 30) {
+        if (this->questCursorRepeatStateY == 1) {
+            this->questCursorRepeatTimerY--;
+            if (this->questCursorRepeatTimerY < 0) {
+                this->questCursorRepeatTimerY = R_PAUSE_STICK_REPEAT_DELAY;
+                moveY = 1;
+            }
+        } else {
+            this->questCursorRepeatTimerY = R_PAUSE_STICK_REPEAT_DELAY_FIRST;
+            this->questCursorRepeatStateY = 1;
+            moveY = 1;
+        }
+    } else if (input->cur.stick_y < -30) {
+        if (this->questCursorRepeatStateY == -1) {
+            this->questCursorRepeatTimerY--;
+            if (this->questCursorRepeatTimerY < 0) {
+                this->questCursorRepeatTimerY = R_PAUSE_STICK_REPEAT_DELAY;
+                moveY = -1;
+            }
+        } else {
+            this->questCursorRepeatTimerY = R_PAUSE_STICK_REPEAT_DELAY_FIRST;
+            this->questCursorRepeatStateY = -1;
+            moveY = -1;
+        }
+    } else {
+        this->questCursorRepeatStateY = 0;
+    }
+
+    if (moveX < 0) {
+        if ((newCursorSong % 6) != 0) {
+            newCursorSong--;
+        }
+    } else if (moveX > 0) {
+        if ((newCursorSong % 6) != 5) {
+            newCursorSong++;
+        }
+    }
+
+    // The first six songs are the lower row in screen coordinates.
+    if (moveY > 0) {
+        if (newCursorSong < 6) {
+            newCursorSong += 6;
+        }
+    } else if (moveY < 0) {
+        if (newCursorSong >= 6) {
+            newCursorSong -= 6;
+        }
+    }
+
+    this->questCursorSong = newCursorSong;
+
+    if (newCursorSong != oldCursorSong) {
+        SFX_PLAY_CENTERED(NA_SE_SY_CURSOR);
+    }
+}
+
 void PauseManager_UpdateInventory(PauseManager* this, PlayState* play) {
     if (!PauseManager_MenuIsActive(play, this->inventory) || !PauseManager_MenuIsActive(play, this->equipment)) {
         return;
@@ -705,6 +850,8 @@ void PauseManager_UpdateInventory(PauseManager* this, PlayState* play) {
         this->equipment->acceptingInput = false;
         this->equipment->shouldDraw = false;
         this->questShouldDraw = true;
+        this->questCursorRepeatStateX = 0;
+        this->questCursorRepeatStateY = 0;
 
         SFX_PLAY_CENTERED(NA_SE_SY_DUMMY_17);
     }
@@ -721,6 +868,8 @@ void PauseManager_UpdateQuest(PauseManager* this, PlayState* play) {
         this->inventory->shouldDraw = false;
     }
 
+    PauseManager_UpdateQuestCursor(this, play);
+
     if (CHECK_BTN_ANY(play->state.input[0].press.button, BTN_Z)) {
         this->page = PAUSE_PAGE_INVENTORY;
         this->inventory->shouldDraw = true;
@@ -728,6 +877,8 @@ void PauseManager_UpdateQuest(PauseManager* this, PlayState* play) {
         this->inventory->targetX = (SCREEN_WIDTH / 2);
         this->equipment->shouldDraw = false;
         this->equipment->acceptingInput = false;
+        this->questCursorRepeatStateX = 0;
+        this->questCursorRepeatStateY = 0;
 
         SFX_PLAY_CENTERED(NA_SE_SY_DUMMY_18);
     }
@@ -863,6 +1014,104 @@ static Gfx* PauseManager_DrawQuestIcon(Gfx* gfx, void* texture, PauseQuestRect* 
                              (QUEST_ICON_HEIGHT * 1024) / rect->height);
 }
 
+static Gfx* PauseManager_DrawQuestSongPreview(Gfx* gfx, PauseManager* this, s16 xOffset, u8 alpha) {
+    OcarinaSongButtons* songButtons;
+    u8 noteAlpha;
+    u8 i;
+
+    if (this->questCursorSong < 0 || this->questCursorSong >= (QUEST_KOKIRI_EMERALD - QUEST_SONG_MINUET) ||
+        !CHECK_QUEST_ITEM(QUEST_SONG_MINUET + this->questCursorSong)) {
+        return gfx;
+    }
+
+    songButtons = &gOcarinaSongButtons[gOcarinaSongItemMap[this->questCursorSong]];
+    noteAlpha = (alpha * 200) / 255;
+
+    gDPPipeSync(gfx++);
+    gDPSetCombineMode(gfx++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+    gDPSetPrimColor(gfx++, 0, 0, 255, 100, 0, (150 * (alpha / 255.0f)));
+    gDPSetEnvColor(gfx++, 0, 0, 0, 255);
+
+    for (i = 0; i < ARRAY_COUNT(sQuestSongStaffLineY); i++) {
+        gfx = Gfx_TextureIA8(gfx, sQuestSongStaffLineTex, 1, 1, 42 + xOffset, sQuestSongStaffLineY[i], 118, 1,
+                             1024 / 118, 1024);
+    }
+
+    gDPSetCombineLERP(gfx++, 1, 0, PRIMITIVE, 0, TEXEL0, 0, PRIMITIVE, 0, 1, 0, PRIMITIVE, 0, TEXEL0, 0,
+                      PRIMITIVE, 0);
+    gDPSetPrimColor(gfx++, 0, 0, 255, 100, 0, noteAlpha);
+    gDPSetEnvColor(gfx++, 0, 0, 0, 255);
+    gDPLoadTextureBlock_4b(gfx++, gOcarinaTrebleClefTex, G_IM_FMT_I, 16, 32, 0, G_TX_MIRROR, G_TX_MIRROR,
+                           G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
+    gSPTextureRectangle(gfx++, (sQuestSongTrebleClefRect.x + xOffset) << 2, sQuestSongTrebleClefRect.y << 2,
+                        (sQuestSongTrebleClefRect.x + xOffset + sQuestSongTrebleClefRect.width) << 2,
+                        (sQuestSongTrebleClefRect.y + sQuestSongTrebleClefRect.height) << 2, G_TX_RENDERTILE, 0, 0,
+                        1 << 10, 1 << 10);
+
+    gDPPipeSync(gfx++);
+    gDPSetCombineMode(gfx++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+
+    for (i = 0; i < songButtons->numButtons && i < ARRAY_COUNT(sQuestSongNoteX); i++) {
+        u8 button = songButtons->buttonsIndex[i];
+
+        if (button > OCARINA_BTN_C_UP) {
+            continue;
+        }
+
+        if (button == OCARINA_BTN_A) {
+            gDPSetPrimColor(gfx++, 0, 0,
+#if !PLATFORM_GC
+                            80, 150, 255,
+#else
+                            80, 255, 150,
+#endif
+                            noteAlpha);
+        } else {
+            gDPSetPrimColor(gfx++, 0, 0, 255, 255, 50, noteAlpha);
+        }
+
+        gfx = Gfx_TextureIA8(gfx, sQuestOcarinaButtonTextures[button], 16, 16, sQuestSongNoteX[i] + xOffset,
+                             sQuestSongNoteY[button], 12, 12,
+                             (16 * 1024) / 12, (16 * 1024) / 12);
+    }
+
+    return gfx;
+}
+
+static Gfx* PauseManager_DrawQuestCursorCorner(Gfx* gfx, void* texture, s16 x, s16 y) {
+    gDPLoadTextureBlock_4b(gfx++, texture, G_IM_FMT_IA, 16, 16, 0, G_TX_NOMIRROR | G_TX_WRAP,
+                           G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
+    gSPTextureRectangle(gfx++, x << 2, y << 2, (x + 16) << 2, (y + 16) << 2, G_TX_RENDERTILE, 0, 0, 1 << 10,
+                        1 << 10);
+    return gfx;
+}
+
+static Gfx* PauseManager_DrawQuestCursor(Gfx* gfx, PauseManager* this, s16 xOffset, u8 alpha) {
+    PauseQuestRect* rect;
+    s16 x;
+    s16 y;
+
+    if (this->questCursorSong < 0 || this->questCursorSong >= (QUEST_KOKIRI_EMERALD - QUEST_SONG_MINUET)) {
+        return gfx;
+    }
+
+    rect = &sQuestIconRects[QUEST_SONG_MINUET + this->questCursorSong];
+    x = rect->x + xOffset - 5;
+    y = rect->y - 3;
+
+    gDPPipeSync(gfx++);
+    gDPSetCombineMode(gfx++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
+    gDPSetPrimColor(gfx++, 0, 0, 255, 255, 255, alpha);
+    gDPSetEnvColor(gfx++, 0, 0, 0, 255);
+
+    gfx = PauseManager_DrawQuestCursorCorner(gfx, ITEM_STATIC_TEX(gItemIconStatic, sQuestCursorTextures[0]), x, y);
+    gfx = PauseManager_DrawQuestCursorCorner(gfx, ITEM_STATIC_TEX(gItemIconStatic, sQuestCursorTextures[1]), x + 8, y);
+    gfx = PauseManager_DrawQuestCursorCorner(gfx, ITEM_STATIC_TEX(gItemIconStatic, sQuestCursorTextures[2]), x, y + 8);
+    gfx = PauseManager_DrawQuestCursorCorner(gfx, ITEM_STATIC_TEX(gItemIconStatic, sQuestCursorTextures[3]), x + 8, y + 8);
+
+    return gfx;
+}
+
 void PauseManager_DrawQuest(PauseManager* this, PlayState* play, Gfx** gfxP) {
     Gfx* gfx = *gfxP;
     u32 questItems = gSaveContext.save.info.inventory.questItems;
@@ -887,15 +1136,18 @@ void PauseManager_DrawQuest(PauseManager* this, PlayState* play, Gfx** gfxP) {
     }
 
     for (i = 0; i < (QUEST_KOKIRI_EMERALD - QUEST_SONG_MINUET); i++) {
-        if (CHECK_QUEST_ITEM(QUEST_SONG_MINUET + i)) {
-            PauseQuestRect* rect = &sQuestIconRects[QUEST_SONG_MINUET + i];
+        PauseQuestRect* rect = &sQuestIconRects[QUEST_SONG_MINUET + i];
 
+        if (CHECK_QUEST_ITEM(QUEST_SONG_MINUET + i)) {
             gDPSetPrimColor(gfx++, 0, 0, sQuestSongPrimRed[i], sQuestSongPrimGreen[i], sQuestSongPrimBlue[i], alpha);
-            gfx = Gfx_TextureIA8(gfx, ITEM_STATIC_TEX(gItemIconStatic, gSongNoteTex), gSongNoteTex_WIDTH,
-                                 gSongNoteTex_HEIGHT, rect->x + xOffset, rect->y, rect->width, rect->height,
-                                 (gSongNoteTex_WIDTH * 1024) / rect->width,
-                                 (gSongNoteTex_HEIGHT * 1024) / rect->height);
+        } else {
+            gDPSetPrimColor(gfx++, 0, 0, 150, 150, 150, (150 * (alpha / 255.0f)));
         }
+
+        gfx = Gfx_TextureIA8(gfx, ITEM_STATIC_TEX(gItemIconStatic, gSongNoteTex), gSongNoteTex_WIDTH,
+                             gSongNoteTex_HEIGHT, rect->x + xOffset, rect->y, rect->width, rect->height,
+                             (gSongNoteTex_WIDTH * 1024) / rect->width,
+                             (gSongNoteTex_HEIGHT * 1024) / rect->height);
     }
 
     for (i = 0; i < (QUEST_STONE_OF_AGONY - QUEST_KOKIRI_EMERALD); i++) {
@@ -962,6 +1214,9 @@ void PauseManager_DrawQuest(PauseManager* this, PlayState* play, Gfx** gfxP) {
             }
         }
     }
+
+    gfx = PauseManager_DrawQuestSongPreview(gfx, this, xOffset, alpha);
+    gfx = PauseManager_DrawQuestCursor(gfx, this, xOffset, alpha);
 
     *gfxP = gfx;
 }
